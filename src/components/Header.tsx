@@ -13,6 +13,13 @@ export default function Header() {
       </h1>
       <nav className="flex items-center gap-1">
         <Link
+          to="/nfl"
+          className={navLinkClass}
+          activeProps={{ className: navLinkActiveClass }}
+        >
+          League
+        </Link>
+        <Link
           to="/leaderboards"
           className={navLinkClass}
           activeProps={{ className: navLinkActiveClass }}
