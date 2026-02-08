@@ -9,14 +9,13 @@ import {
 } from 'recharts'
 import type { EnrichedPlayer } from '../hooks/use-leaderboard'
 import { STAT_CATEGORIES, formatStatValue } from '../stat-columns'
+import { useTeamContext } from '@/contexts/team-context'
 
 interface LeaderboardChartProps {
   data: EnrichedPlayer[]
   statKey: string
   category: string
 }
-
-const BAR_COLOR = '#06b6d4' // cyan-500
 
 export function LeaderboardChart({
   data,
@@ -27,6 +26,9 @@ export function LeaderboardChart({
     (s) => s.key === statKey
   )
   const statLabel = statDef?.label ?? statKey
+  const { allTeams } = useTeamContext()
+
+  const teamColorMap = new Map(allTeams.map((t) => [t.team_abbr, t.team_color]))
 
   const chartData = data.map((player) => ({
     name: player.player_name,
@@ -65,8 +67,8 @@ export function LeaderboardChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#1f2937',
-            border: '1px solid #374151',
+            backgroundColor: '#111827',
+            border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '8px',
             color: '#f3f4f6',
           }}
@@ -80,11 +82,11 @@ export function LeaderboardChart({
           }}
         />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-          {chartData.map((_, index) => (
+          {chartData.map((entry, index) => (
             <Cell
               key={index}
-              fill={BAR_COLOR}
-              fillOpacity={1 - index * (0.5 / Math.max(chartData.length, 1))}
+              fill={teamColorMap.get(entry.team) || '#06b6d4'}
+              fillOpacity={1 - index * (0.3 / Math.max(chartData.length, 1))}
             />
           ))}
         </Bar>

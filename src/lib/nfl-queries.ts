@@ -56,7 +56,7 @@ const SEASONAL_COLUMNS = [
 ]
 
 const ROSTER_COLUMNS = [
-  'player_id', 'player_name', 'position', 'team',
+  'player_id', 'player_name', 'position', 'team', 'headshot_url',
 ]
 
 const TEAM_COLUMNS = [

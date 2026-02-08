@@ -50,7 +50,7 @@ export function Breadcrumbs({
           {crumb.onClick ? (
             <button
               onClick={crumb.onClick}
-              className="text-gray-400 hover:text-cyan-400 transition-colors"
+              className="text-gray-400 hover:text-team-primary transition-colors"
             >
               {crumb.label}
             </button>

@@ -48,9 +48,11 @@ export function LeaderboardsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 space-y-6">
+    <div className="text-gray-100 p-6 space-y-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">NFL Leaderboards</h1>
+        <h1 className="font-display text-4xl font-extrabold uppercase tracking-wide">
+          NFL Leaderboards
+        </h1>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <StatCategoryTabs
@@ -90,9 +92,9 @@ export function LeaderboardsPage({
           </div>
         ) : (
           <>
-            <Card className="bg-gray-800/50 border-gray-700">
+            <Card className="bg-gray-800/50 border-team-primary/20">
               <CardHeader>
-                <CardTitle className="text-gray-200">
+                <CardTitle className="font-display text-lg uppercase tracking-wider text-gray-200">
                   Top {topN}{' '}
                   {STAT_CATEGORIES[category]?.stats.find(
                     (s) => s.key === stat
@@ -111,9 +113,9 @@ export function LeaderboardsPage({
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-800/50 border-gray-700">
+            <Card className="bg-gray-800/50 border-team-primary/20">
               <CardHeader>
-                <CardTitle className="text-gray-200">
+                <CardTitle className="font-display text-lg uppercase tracking-wider text-gray-200">
                   All Players ({filtered.length})
                 </CardTitle>
               </CardHeader>

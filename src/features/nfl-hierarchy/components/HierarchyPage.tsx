@@ -50,7 +50,7 @@ export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="p-6">
       <div className="mx-auto max-w-7xl space-y-4">
         {/* Breadcrumbs */}
         <Breadcrumbs

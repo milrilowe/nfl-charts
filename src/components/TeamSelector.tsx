@@ -36,7 +36,16 @@ export function TeamSelector() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-700/50 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-gray-700">
+        <button
+          className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm text-gray-200 transition-all hover:bg-gray-700"
+          style={teamInfo ? {
+            borderColor: `${teamInfo.team_color}50`,
+            backgroundColor: `${teamInfo.team_color}10`,
+          } : {
+            borderColor: 'rgb(75 85 99)',
+            backgroundColor: 'rgba(55 65 81 / 0.5)',
+          }}
+        >
           {teamInfo ? (
             <>
               <img

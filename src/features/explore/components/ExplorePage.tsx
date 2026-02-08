@@ -23,8 +23,8 @@ export function ExplorePage() {
   } = useDataExplorer()
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 space-y-4">
-      <h1 className="text-3xl font-bold">NFL Data Explorer</h1>
+    <div className="text-gray-100 p-6 space-y-4">
+      <h1 className="font-display text-4xl font-extrabold uppercase tracking-wide">NFL Data Explorer</h1>
 
       <DatasetSelector
         datasets={datasets}

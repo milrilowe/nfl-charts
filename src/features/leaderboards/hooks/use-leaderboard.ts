@@ -5,6 +5,7 @@ interface RosterInfo {
   player_name: string
   position: string
   team: string
+  headshot_url: string
 }
 
 interface TeamInfo {
@@ -18,6 +19,7 @@ export interface EnrichedPlayer {
   player_name: string
   position: string
   team: string
+  headshot_url: string
   team_name: string
   team_conf: string
   team_division: string
@@ -40,6 +42,7 @@ export function useLeaderboardData(year: number) {
           player_name: String(row.player_name ?? ''),
           position: String(row.position ?? ''),
           team: String(row.team ?? ''),
+          headshot_url: String(row.headshot_url ?? ''),
         })
       }
     }
@@ -76,6 +79,7 @@ export function useLeaderboardData(year: number) {
           player_name: rosterInfo.player_name,
           position: rosterInfo.position,
           team: teamAbbr,
+          headshot_url: rosterInfo.headshot_url,
           team_name: teamInfo?.team_name ?? '',
           team_conf: teamInfo?.team_conf ?? '',
           team_division: teamInfo?.team_division ?? '',

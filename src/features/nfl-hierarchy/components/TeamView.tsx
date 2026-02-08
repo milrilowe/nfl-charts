@@ -37,8 +37,6 @@ interface TeamViewProps {
 
 const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'FB', 'K', 'P']
 
-const BAR_COLOR = '#06b6d4'
-
 export function TeamView({
   team,
   players,
@@ -82,26 +80,44 @@ export function TeamView({
 
   return (
     <div className="space-y-6">
-      {/* Team Header */}
-      <div className="flex items-center gap-4">
+      {/* Team Header — Madden Banner */}
+      <div
+        className="relative overflow-hidden rounded-xl p-6"
+        style={{
+          background: `linear-gradient(135deg, ${team.team_color}50 0%, ${team.team_color2}30 50%, rgba(17,24,39,0.9) 80%)`,
+        }}
+      >
+        {/* Watermark */}
         {team.team_logo && (
           <img
             src={team.team_logo}
-            alt={team.team_name}
-            className="h-16 w-16"
+            alt=""
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-28 w-28 opacity-10 pointer-events-none"
           />
         )}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-100">
-            {team.team_name}
-          </h2>
-          <p className="text-sm text-gray-400">
-            {team.team_conf} {team.team_division.replace(team.team_conf + ' ', '')} &middot; {team.player_count} players
-          </p>
+
+        <div className="relative flex items-center gap-5">
+          {team.team_logo && (
+            <img
+              src={team.team_logo}
+              alt={team.team_name}
+              className="h-20 w-20 drop-shadow-lg"
+            />
+          )}
+          <div>
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-wide text-white">
+              {team.team_name}
+            </h2>
+            <p className="font-display text-sm uppercase tracking-wider text-gray-300">
+              {team.team_conf} {team.team_division.replace(team.team_conf + ' ', '')} &middot; {team.player_count} players
+            </p>
+          </div>
         </div>
+
+        {/* Accent stripe */}
         <div
-          className="ml-auto h-12 w-2 rounded-full"
-          style={{ backgroundColor: team.team_color }}
+          className="absolute bottom-0 left-0 right-0 h-1"
+          style={{ background: `linear-gradient(90deg, ${team.team_color}, ${team.team_color2})` }}
         />
       </div>
 
@@ -110,17 +126,26 @@ export function TeamView({
         {TEAM_STATS.slice(0, 6).map((s) => (
           <div
             key={s.key}
-            className={`rounded-lg px-3 py-2 text-center ${
+            className={`rounded-lg px-3 py-2 text-center transition-colors ${
               s.key === search.stat
-                ? 'bg-cyan-950/40 border border-cyan-800/50'
+                ? 'border'
                 : 'bg-gray-800/50 border border-gray-700/50'
             }`}
+            style={
+              s.key === search.stat
+                ? {
+                    backgroundColor: `${team.team_color}15`,
+                    borderColor: `${team.team_color}40`,
+                  }
+                : undefined
+            }
           >
-            <div className="text-xs text-gray-400">{s.label}</div>
+            <div className="font-display text-xs uppercase tracking-wider text-gray-400">{s.label}</div>
             <div
-              className={`text-lg font-semibold tabular-nums ${
-                s.key === search.stat ? 'text-cyan-400' : 'text-gray-200'
+              className={`font-display text-xl font-bold tabular-nums ${
+                s.key === search.stat ? '' : 'text-gray-200'
               }`}
+              style={s.key === search.stat ? { color: team.team_color } : undefined}
             >
               {formatStatValue(team[s.key], s.format)}
             </div>
@@ -140,11 +165,16 @@ export function TeamView({
                   stat: STAT_CATEGORIES[key].defaultStat,
                 })
               }
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-sm font-display font-semibold uppercase tracking-wider transition-colors ${
                 search.category === key
-                  ? 'bg-cyan-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-400 hover:text-gray-200'
               }`}
+              style={
+                search.category === key
+                  ? { backgroundColor: team.team_color }
+                  : undefined
+              }
             >
               {cat.label}
             </button>
@@ -169,8 +199,14 @@ export function TeamView({
 
       {/* Top Players Chart */}
       {chartData.length > 0 && (
-        <div className="rounded-xl bg-gray-800/30 border border-gray-700/50 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">
+        <div
+          className="rounded-xl border p-4"
+          style={{
+            backgroundColor: 'rgba(31,41,55,0.3)',
+            borderColor: `${team.team_color}20`,
+          }}
+        >
+          <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
             Top Players — {statDef?.label ?? search.stat}
           </h3>
           <ResponsiveContainer
@@ -198,8 +234,8 @@ export function TeamView({
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
+                  backgroundColor: '#111827',
+                  border: `1px solid ${team.team_color}40`,
                   borderRadius: '8px',
                   color: '#f3f4f6',
                 }}
@@ -212,7 +248,7 @@ export function TeamView({
                 {chartData.map((_, i) => (
                   <Cell
                     key={i}
-                    fill={BAR_COLOR}
+                    fill={team.team_color}
                     fillOpacity={1 - i * (0.5 / Math.max(chartData.length, 1))}
                   />
                 ))}
@@ -226,7 +262,7 @@ export function TeamView({
       <div className="space-y-4">
         {positionGroups.map(([position, posPlayers]) => (
           <div key={position}>
-            <h3 className="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
               {position}
             </h3>
             <Table>
@@ -240,9 +276,10 @@ export function TeamView({
                         key={col}
                         className={`text-gray-400 ${
                           col === search.stat
-                            ? 'text-cyan-400 font-semibold'
+                            ? 'font-semibold'
                             : ''
                         }`}
+                        style={col === search.stat ? { color: team.team_color } : undefined}
                       >
                         {COLUMN_LABELS[col] ?? col}
                       </TableHead>
@@ -256,7 +293,7 @@ export function TeamView({
                     className="border-gray-700/50 hover:bg-gray-800/50 cursor-pointer"
                     onClick={() => onSelectPlayer(player.player_id)}
                   >
-                    <TableCell className="font-mono text-gray-500">
+                    <TableCell className="font-display font-bold text-gray-500">
                       {idx + 1}
                     </TableCell>
                     {columns
@@ -275,13 +312,28 @@ export function TeamView({
                             key={col}
                             className={
                               col === 'player_name'
-                                ? 'font-medium text-gray-100'
+                                ? 'font-display font-semibold text-gray-100'
                                 : col === search.stat
-                                  ? 'text-cyan-400 font-semibold'
+                                  ? 'font-semibold font-display tabular-nums'
                                   : 'text-gray-300'
                             }
+                            style={col === search.stat ? { color: team.team_color } : undefined}
                           >
-                            {displayValue}
+                            {col === 'player_name' ? (
+                              <div className="flex items-center gap-2">
+                                {player.headshot_url && (
+                                  <img
+                                    src={player.headshot_url}
+                                    alt=""
+                                    className="h-7 w-7 rounded-full object-cover bg-gray-700"
+                                    loading="lazy"
+                                  />
+                                )}
+                                <span>{displayValue}</span>
+                              </div>
+                            ) : (
+                              displayValue
+                            )}
                           </TableCell>
                         )
                       })}

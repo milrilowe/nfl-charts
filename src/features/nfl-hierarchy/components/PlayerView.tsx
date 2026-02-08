@@ -18,11 +18,10 @@ interface PlayerViewProps {
   search: HierarchySearch
 }
 
-const BAR_COLOR = '#06b6d4'
-const HIGHLIGHT_COLOR = '#22d3ee'
-
 export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps) {
   const meta = teamMeta.get(player.team)
+  const teamColor = meta?.team_color ?? '#6b7280'
+  const teamColor2 = meta?.team_color2 ?? '#374151'
   const categoryConfig = STAT_CATEGORIES[search.category]
   const statDef = categoryConfig?.stats.find((s) => s.key === search.stat)
 
@@ -52,23 +51,52 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
 
   return (
     <div className="space-y-6">
-      {/* Player Header */}
-      <div className="flex items-center gap-4">
+      {/* Player Header — Madden Banner */}
+      <div
+        className="relative overflow-hidden rounded-xl p-6"
+        style={{
+          background: `linear-gradient(135deg, ${teamColor}50 0%, ${teamColor2}30 50%, rgba(17,24,39,0.9) 80%)`,
+        }}
+      >
+        {/* Watermark */}
         {meta?.team_logo && (
-          <img src={meta.team_logo} alt={player.team} className="h-14 w-14" />
+          <img
+            src={meta.team_logo}
+            alt=""
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-28 w-28 opacity-10 pointer-events-none"
+          />
         )}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-100">
-            {player.player_name}
-          </h2>
-          <p className="text-sm text-gray-400">
-            {player.position} &middot; {player.team_name} &middot;{' '}
-            {search.year}
-          </p>
+
+        <div className="relative flex items-center gap-5">
+          {/* Player headshot */}
+          {player.headshot_url ? (
+            <img
+              src={player.headshot_url}
+              alt={player.player_name}
+              className="h-24 w-24 rounded-xl object-cover bg-gray-700 border-2 shadow-lg"
+              style={{ borderColor: teamColor }}
+            />
+          ) : meta?.team_logo ? (
+            <img src={meta.team_logo} alt={player.team} className="h-20 w-20 drop-shadow-lg" />
+          ) : null}
+
+          <div>
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-wide text-white">
+              {player.player_name}
+            </h2>
+            <p className="font-display text-sm uppercase tracking-wider text-gray-300 flex items-center gap-2">
+              {meta?.team_logo && (
+                <img src={meta.team_logo} alt="" className="h-5 w-5 inline" />
+              )}
+              {player.position} &middot; {player.team_name} &middot; {search.year}
+            </p>
+          </div>
         </div>
+
+        {/* Accent stripe */}
         <div
-          className="ml-auto h-12 w-2 rounded-full"
-          style={{ backgroundColor: meta?.team_color ?? '#6b7280' }}
+          className="absolute bottom-0 left-0 right-0 h-1"
+          style={{ background: `linear-gradient(90deg, ${teamColor}, ${teamColor2})` }}
         />
       </div>
 
@@ -83,17 +111,26 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
           return (
             <div
               key={s.key}
-              className={`rounded-lg px-3 py-2 ${
+              className={`rounded-lg px-3 py-2 transition-colors ${
                 s.key === search.stat
-                  ? 'bg-cyan-950/40 border border-cyan-800/50'
+                  ? 'border'
                   : 'bg-gray-800/50 border border-gray-700/50'
               }`}
+              style={
+                s.key === search.stat
+                  ? {
+                      backgroundColor: `${teamColor}15`,
+                      borderColor: `${teamColor}40`,
+                    }
+                  : undefined
+              }
             >
-              <div className="text-xs text-gray-400">{s.label}</div>
+              <div className="font-display text-xs uppercase tracking-wider text-gray-400">{s.label}</div>
               <div
-                className={`text-lg font-semibold tabular-nums ${
-                  s.key === search.stat ? 'text-cyan-400' : 'text-gray-200'
+                className={`font-display text-xl font-bold tabular-nums ${
+                  s.key === search.stat ? '' : 'text-gray-200'
                 }`}
+                style={s.key === search.stat ? { color: teamColor } : undefined}
               >
                 {formatStatValue(value, s.format)}
               </div>
@@ -104,8 +141,14 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
 
       {/* Positional Comparison Chart */}
       {chartData.length > 1 && (
-        <div className="rounded-xl bg-gray-800/30 border border-gray-700/50 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">
+        <div
+          className="rounded-xl border p-4"
+          style={{
+            backgroundColor: 'rgba(31,41,55,0.3)',
+            borderColor: `${teamColor}20`,
+          }}
+        >
+          <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
             vs. Top {player.position}s — {statDef?.label ?? search.stat}
           </h3>
           <ResponsiveContainer
@@ -133,8 +176,8 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
+                  backgroundColor: '#111827',
+                  border: `1px solid ${teamColor}40`,
                   borderRadius: '8px',
                   color: '#f3f4f6',
                 }}
@@ -147,12 +190,8 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.isTarget ? HIGHLIGHT_COLOR : BAR_COLOR}
-                    fillOpacity={
-                      entry.isTarget
-                        ? 1
-                        : 1 - i * (0.5 / Math.max(chartData.length, 1))
-                    }
+                    fill={teamColor}
+                    fillOpacity={entry.isTarget ? 1 : 0.5}
                   />
                 ))}
               </Bar>
