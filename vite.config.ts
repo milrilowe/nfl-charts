@@ -14,15 +14,6 @@ const config = defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  server: {
-    proxy: {
-      '/api/nfl': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/nfl/, ''),
-      },
-    },
-  },
   plugins: [
     devtools(),
     nitro(),

@@ -3,104 +3,32 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import {
-  fetchDatasets,
-  fetchDatasetSchema,
-  fetchDatasetData,
+  fetchPlayers,
+  fetchTeams,
+  fetchTeamsMeta,
+  type FetchPlayersParams,
 } from './nfl-api'
 
-export function useDatasets() {
+export function usePlayers(params: FetchPlayersParams) {
   return useQuery({
-    queryKey: ['datasets'],
-    queryFn: fetchDatasets,
-    staleTime: 1000 * 60 * 60, // 1 hour
+    queryKey: ['players', params],
+    queryFn: () => fetchPlayers({ data: params }),
+    staleTime: 1000 * 60 * 10, // 10 min (server caches the join)
   })
 }
 
-export function useDatasetSchema(datasetId: string | null) {
+export function useTeams(year: number, team?: string) {
   return useQuery({
-    queryKey: ['dataset-schema', datasetId],
-    queryFn: () => fetchDatasetSchema(datasetId!),
-    enabled: !!datasetId,
-    staleTime: 1000 * 60 * 60,
+    queryKey: ['teams', year, team],
+    queryFn: () => fetchTeams({ data: { year, team } }),
+    staleTime: 1000 * 60 * 10,
   })
 }
 
-export function useDatasetData(
-  datasetId: string | null,
-  years: number[],
-  columns: string[] | undefined,
-  limit: number,
-  offset: number
-) {
+export function useTeamsMeta() {
   return useQuery({
-    queryKey: ['dataset-data', datasetId, years, columns, limit, offset],
-    queryFn: () => fetchDatasetData({
-      datasetId: datasetId!,
-      years,
-      columns,
-      limit,
-      offset,
-    }),
-    enabled: !!datasetId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  })
-}
-
-const SEASONAL_COLUMNS = [
-  'player_id', 'season', 'completions', 'attempts',
-  'passing_yards', 'passing_tds', 'interceptions',
-  'carries', 'rushing_yards', 'rushing_tds',
-  'receptions', 'targets', 'receiving_yards', 'receiving_tds',
-  'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
-  'target_share', 'games',
-]
-
-const ROSTER_COLUMNS = [
-  'player_id', 'player_name', 'position', 'team', 'headshot_url',
-]
-
-const TEAM_COLUMNS = [
-  'team_abbr', 'team_name', 'team_nick', 'team_conf', 'team_division',
-  'team_color', 'team_color2', 'team_logo_espn',
-]
-
-export function useSeasonalData(year: number) {
-  return useQuery({
-    queryKey: ['seasonal-data', year],
-    queryFn: () => fetchDatasetData({
-      datasetId: 'seasonal',
-      years: [year],
-      columns: SEASONAL_COLUMNS,
-      limit: 10000,
-      offset: 0,
-    }),
-    staleTime: 1000 * 60 * 30,
-  })
-}
-
-export function useRosterData(year: number) {
-  return useQuery({
-    queryKey: ['roster-data', year],
-    queryFn: () => fetchDatasetData({
-      datasetId: 'rosters',
-      years: [year],
-      columns: ROSTER_COLUMNS,
-      limit: 10000,
-      offset: 0,
-    }),
-    staleTime: 1000 * 60 * 60,
-  })
-}
-
-export function useTeamsData() {
-  return useQuery({
-    queryKey: ['teams-data'],
-    queryFn: () => fetchDatasetData({
-      datasetId: 'teams',
-      columns: TEAM_COLUMNS,
-      limit: 10000,
-      offset: 0,
-    }),
-    staleTime: 1000 * 60 * 60,
+    queryKey: ['teams-meta'],
+    queryFn: () => fetchTeamsMeta(),
+    staleTime: 1000 * 60 * 60, // 1 hour (static data)
   })
 }

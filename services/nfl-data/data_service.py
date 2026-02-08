@@ -1,235 +1,226 @@
 """
-NFL Data Service - Wraps nfl_data_py to provide data access
+NFL Data Service - Purpose-built data access with server-side joins and aggregation
 """
 import nfl_data_py as nfl
 import pandas as pd
 from typing import Any
 from functools import lru_cache
 
-# Dataset definitions with metadata
-DATASETS = {
-    "weekly": {
-        "name": "Weekly Player Stats",
-        "description": "Weekly statistics for all players",
-        "import_fn": "import_weekly_data",
-        "supports_years": True,
-        "min_year": 1999,
-    },
+# Columns to select from each raw dataset for the enriched join
+SEASONAL_COLUMNS = [
+    'player_id', 'season', 'completions', 'attempts',
+    'passing_yards', 'passing_tds', 'interceptions',
+    'carries', 'rushing_yards', 'rushing_tds',
+    'receptions', 'targets', 'receiving_yards', 'receiving_tds',
+    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
+    'target_share', 'games',
+]
+
+ROSTER_COLUMNS = [
+    'player_id', 'player_name', 'position', 'team', 'headshot_url',
+]
+
+TEAM_COLUMNS = [
+    'team_abbr', 'team_name', 'team_nick', 'team_conf', 'team_division',
+    'team_color', 'team_color2', 'team_logo_espn',
+]
+
+SUM_KEYS = [
+    'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions',
+    'carries', 'rushing_yards', 'rushing_tds',
+    'receptions', 'targets', 'receiving_yards', 'receiving_tds',
+    'fantasy_points', 'fantasy_points_ppr',
+]
+
+# Raw dataset definitions for nfl_data_py
+_DATASETS = {
     "seasonal": {
-        "name": "Seasonal Player Stats",
-        "description": "Season-aggregated statistics with market share metrics",
         "import_fn": "import_seasonal_data",
         "supports_years": True,
-        "min_year": 1999,
     },
     "rosters": {
-        "name": "Team Rosters",
-        "description": "Player roster information by season",
         "import_fn": "import_seasonal_rosters",
         "supports_years": True,
-        "min_year": 1999,
-    },
-    "schedules": {
-        "name": "Game Schedules",
-        "description": "Game schedules and results",
-        "import_fn": "import_schedules",
-        "supports_years": True,
-        "min_year": 1999,
     },
     "teams": {
-        "name": "Team Information",
-        "description": "Team names, colors, logos, and metadata",
         "import_fn": "import_team_desc",
         "supports_years": False,
-    },
-    "draft_picks": {
-        "name": "Draft Picks",
-        "description": "Historical NFL draft picks",
-        "import_fn": "import_draft_picks",
-        "supports_years": True,
-        "min_year": 1980,
-    },
-    "combine": {
-        "name": "Combine Results",
-        "description": "NFL Combine measurements and test results",
-        "import_fn": "import_combine_data",
-        "supports_years": True,
-        "min_year": 2000,
-    },
-    "injuries": {
-        "name": "Injury Reports",
-        "description": "Weekly injury reports",
-        "import_fn": "import_injuries",
-        "supports_years": True,
-        "min_year": 2009,
-    },
-    "ngs_passing": {
-        "name": "Next Gen Stats - Passing",
-        "description": "Advanced passing metrics from Next Gen Stats",
-        "import_fn": "import_ngs_data",
-        "import_args": {"stat_type": "passing"},
-        "supports_years": True,
-        "min_year": 2016,
-    },
-    "ngs_rushing": {
-        "name": "Next Gen Stats - Rushing",
-        "description": "Advanced rushing metrics from Next Gen Stats",
-        "import_fn": "import_ngs_data",
-        "import_args": {"stat_type": "rushing"},
-        "supports_years": True,
-        "min_year": 2016,
-    },
-    "ngs_receiving": {
-        "name": "Next Gen Stats - Receiving",
-        "description": "Advanced receiving metrics from Next Gen Stats",
-        "import_fn": "import_ngs_data",
-        "import_args": {"stat_type": "receiving"},
-        "supports_years": True,
-        "min_year": 2016,
-    },
-    "snap_counts": {
-        "name": "Snap Counts",
-        "description": "Player snap count data",
-        "import_fn": "import_snap_counts",
-        "supports_years": True,
-        "min_year": 2012,
-    },
-    "qbr": {
-        "name": "QBR Ratings",
-        "description": "ESPN QBR quarterback ratings",
-        "import_fn": "import_qbr",
-        "supports_years": True,
-        "min_year": 2006,
     },
 }
 
 
-def get_datasets() -> list[dict[str, Any]]:
-    """Return list of available datasets with metadata"""
-    return [
-        {
-            "id": dataset_id,
-            "name": info["name"],
-            "description": info["description"],
-            "supports_years": info["supports_years"],
-            "min_year": info.get("min_year"),
-        }
-        for dataset_id, info in DATASETS.items()
-    ]
-
-
-def get_dataset_schema(dataset_id: str, year: int | None = None) -> dict[str, Any]:
-    """Get the schema (columns and types) for a dataset"""
-    if dataset_id not in DATASETS:
-        raise ValueError(f"Unknown dataset: {dataset_id}")
-
-    # Fetch a small sample to get the schema
-    sample_year = year or 2023
-    df = _fetch_dataset(dataset_id, [sample_year], limit=1)
-
-    columns = []
-    for col in df.columns:
-        dtype = str(df[col].dtype)
-        col_type = "string"
-        if "int" in dtype:
-            col_type = "integer"
-        elif "float" in dtype:
-            col_type = "number"
-        elif "bool" in dtype:
-            col_type = "boolean"
-        elif "datetime" in dtype:
-            col_type = "datetime"
-
-        columns.append({
-            "name": col,
-            "type": col_type,
-            "dtype": dtype,
-        })
-
-    return {
-        "dataset_id": dataset_id,
-        "columns": columns,
-        "total_columns": len(columns),
-    }
-
-
-def get_dataset_data(
-    dataset_id: str,
-    years: list[int] | None = None,
-    columns: list[str] | None = None,
-    limit: int = 100,
-    offset: int = 0,
-) -> dict[str, Any]:
-    """Fetch data from a dataset with optional filtering"""
-    if dataset_id not in DATASETS:
-        raise ValueError(f"Unknown dataset: {dataset_id}")
-
-    df = _fetch_dataset(dataset_id, years)
-
-    total_rows = len(df)
-
-    # Select specific columns if requested
-    if columns:
-        available_cols = [c for c in columns if c in df.columns]
-        if available_cols:
-            df = df[available_cols]
-
-    # Apply pagination
-    df = df.iloc[offset:offset + limit]
-
-    # Convert to records, handling NaN values
-    df = df.fillna("")
-    records = df.to_dict(orient="records")
-
-    return {
-        "dataset_id": dataset_id,
-        "columns": list(df.columns),
-        "data": records,
-        "total_rows": total_rows,
-        "offset": offset,
-        "limit": limit,
-    }
-
+# ---------------------------------------------------------------------------
+# Raw data fetching (cached)
+# ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=32)
-def _fetch_dataset_cached(dataset_id: str, years_tuple: tuple[int, ...] | None) -> bytes:
-    """Cached version that returns pickled DataFrame"""
+def _fetch_raw_cached(dataset_id: str, years_tuple: tuple[int, ...] | None) -> bytes:
+    """Cached fetch that returns pickled DataFrame"""
     import pickle
-    df = _fetch_dataset_uncached(dataset_id, list(years_tuple) if years_tuple else None)
+    df = _fetch_raw(dataset_id, list(years_tuple) if years_tuple else None)
     return pickle.dumps(df)
 
 
-def _fetch_dataset(dataset_id: str, years: list[int] | None, limit: int | None = None) -> pd.DataFrame:
-    """Fetch dataset, using cache when possible"""
+def _fetch_dataset(dataset_id: str, years: list[int] | None) -> pd.DataFrame:
+    """Fetch a raw dataset, using pickle cache"""
     import pickle
     years_tuple = tuple(years) if years else None
-    pickled = _fetch_dataset_cached(dataset_id, years_tuple)
-    df = pickle.loads(pickled)
-    if limit:
-        df = df.head(limit)
-    return df
+    pickled = _fetch_raw_cached(dataset_id, years_tuple)
+    return pickle.loads(pickled)
 
 
-def _fetch_dataset_uncached(dataset_id: str, years: list[int] | None) -> pd.DataFrame:
-    """Actually fetch the dataset from nfl_data_py"""
-    info = DATASETS[dataset_id]
-    fn_name = info["import_fn"]
-    fn = getattr(nfl, fn_name)
-
-    # Build arguments
-    kwargs = info.get("import_args", {}).copy()
-
+def _fetch_raw(dataset_id: str, years: list[int] | None) -> pd.DataFrame:
+    """Actually fetch from nfl_data_py"""
+    info = _DATASETS[dataset_id]
+    fn = getattr(nfl, info["import_fn"])
+    kwargs = {}
     if info["supports_years"]:
-        if years:
-            kwargs["years"] = years
-        else:
-            # Default to recent years
-            kwargs["years"] = [2023, 2024]
+        kwargs["years"] = years or [2023, 2024]
+    return fn(**kwargs)
 
-    df = fn(**kwargs)
-    return df
+
+def _safe_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Select only columns that exist in the DataFrame"""
+    return df[[c for c in cols if c in df.columns]]
+
+
+# ---------------------------------------------------------------------------
+# Enriched player DataFrame (cached per year)
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=16)
+def _build_enriched_df(year: int) -> bytes:
+    """Join seasonal + rosters + teams into one enriched DataFrame. Cached per year."""
+    import pickle
+
+    seasonal = _safe_columns(_fetch_dataset("seasonal", [year]), SEASONAL_COLUMNS)
+    rosters = _safe_columns(_fetch_dataset("rosters", [year]), ROSTER_COLUMNS)
+    teams = _safe_columns(_fetch_dataset("teams", None), TEAM_COLUMNS)
+
+    # Deduplicate rosters (keep first per player_id)
+    rosters = rosters.drop_duplicates(subset='player_id', keep='first')
+
+    # Join seasonal + rosters on player_id
+    enriched = seasonal.merge(rosters, on='player_id', how='inner')
+
+    # Join with teams on team → team_abbr
+    enriched = enriched.merge(teams, left_on='team', right_on='team_abbr', how='left')
+
+    # Drop players without a name
+    enriched = enriched[enriched['player_name'].notna() & (enriched['player_name'] != '')]
+
+    # Fill NaN: numbers with 0, strings with ""
+    num_cols = enriched.select_dtypes(include='number').columns
+    enriched[num_cols] = enriched[num_cols].fillna(0)
+    enriched = enriched.fillna('')
+
+    return pickle.dumps(enriched)
+
+
+def _get_enriched(year: int) -> pd.DataFrame:
+    """Get the enriched DataFrame for a year (unpickled from cache)"""
+    import pickle
+    return pickle.loads(_build_enriched_df(year))
+
+
+# ---------------------------------------------------------------------------
+# Public API functions
+# ---------------------------------------------------------------------------
+
+def get_players(
+    year: int = 2024,
+    sort_by: str | None = None,
+    position: str | None = None,
+    team: str | None = None,
+    conference: str | None = None,
+    player_id: str | None = None,
+    limit: int = 500,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Get enriched players with optional filter/sort/pagination"""
+    df = _get_enriched(year)
+
+    # Available filter values (from full dataset, before filtering)
+    available_positions = sorted(df['position'].dropna().unique().tolist())
+    available_teams = sorted(df['team'].dropna().unique().tolist())
+
+    # Apply filters
+    if position:
+        df = df[df['position'] == position]
+    if team:
+        df = df[df['team'] == team]
+    if conference:
+        df = df[df['team_conf'] == conference]
+    if player_id:
+        df = df[df['player_id'] == player_id]
+
+    total = len(df)
+
+    # Sort
+    if sort_by and sort_by in df.columns:
+        df = df.sort_values(sort_by, ascending=False, na_position='last')
+
+    # Paginate
+    df = df.iloc[offset:offset + limit]
+
+    return {
+        "year": year,
+        "data": df.to_dict(orient="records"),
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "available_positions": available_positions,
+        "available_teams": available_teams,
+    }
+
+
+def get_team_aggregates(year: int = 2024, team: str | None = None) -> dict[str, Any]:
+    """Get aggregated team stats (player stats summed per team)"""
+    enriched = _get_enriched(year)
+    teams_meta = _safe_columns(_fetch_dataset("teams", None), TEAM_COLUMNS)
+
+    # Sum stats by team
+    agg = enriched.groupby('team')[SUM_KEYS].sum().reset_index()
+
+    # Derived columns
+    agg['total_yards'] = agg['passing_yards'] + agg['rushing_yards'] + agg['receiving_yards']
+    agg['total_tds'] = agg['passing_tds'] + agg['rushing_tds'] + agg['receiving_tds']
+
+    # Player count
+    counts = enriched.groupby('team').size().reset_index(name='player_count')
+    agg = agg.merge(counts, on='team')
+
+    # Join team metadata
+    agg = agg.merge(teams_meta, left_on='team', right_on='team_abbr', how='left')
+
+    # Rename for frontend compat
+    if 'team_logo_espn' in agg.columns:
+        agg = agg.rename(columns={'team_logo_espn': 'team_logo'})
+
+    if team:
+        agg = agg[agg['team'] == team]
+
+    # Fill NaN
+    num_cols = agg.select_dtypes(include='number').columns
+    agg[num_cols] = agg[num_cols].fillna(0)
+    agg = agg.fillna('')
+
+    return {
+        "year": year,
+        "data": agg.to_dict(orient="records"),
+    }
+
+
+def get_teams_meta() -> dict[str, Any]:
+    """Get lightweight team metadata for theming/selectors"""
+    df = _safe_columns(_fetch_dataset("teams", None), TEAM_COLUMNS)
+    df = df.fillna('')
+    return {
+        "data": df.to_dict(orient="records"),
+    }
 
 
 def clear_cache():
-    """Clear the data cache"""
-    _fetch_dataset_cached.cache_clear()
+    """Clear all caches"""
+    _fetch_raw_cached.cache_clear()
+    _build_enriched_df.cache_clear()

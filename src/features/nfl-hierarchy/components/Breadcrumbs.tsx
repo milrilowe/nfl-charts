@@ -46,16 +46,16 @@ export function Breadcrumbs({
     <nav className="flex items-center gap-1.5 text-sm">
       {crumbs.map((crumb, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span className="text-gray-600">/</span>}
+          {i > 0 && <span className="text-muted-foreground/50">/</span>}
           {crumb.onClick ? (
             <button
               onClick={crumb.onClick}
-              className="text-gray-400 hover:text-team-primary transition-colors"
+              className="text-muted-foreground hover:text-team-primary transition-colors"
             >
               {crumb.label}
             </button>
           ) : (
-            <span className="text-gray-200 font-medium">{crumb.label}</span>
+            <span className="text-foreground font-medium">{crumb.label}</span>
           )}
         </span>
       ))}

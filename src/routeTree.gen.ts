@@ -11,11 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NflRouteImport } from './routes/nfl'
 import { Route as LeaderboardsRouteImport } from './routes/leaderboards'
-import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiNflDatasetsRouteImport } from './routes/api/nfl/datasets'
-import { Route as ApiNflDatasetsDatasetIdSchemaRouteImport } from './routes/api/nfl/datasets.$datasetId.schema'
-import { Route as ApiNflDatasetsDatasetIdDataRouteImport } from './routes/api/nfl/datasets.$datasetId.data'
 
 const NflRoute = NflRouteImport.update({
   id: '/nfl',
@@ -27,98 +23,40 @@ const LeaderboardsRoute = LeaderboardsRouteImport.update({
   path: '/leaderboards',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExploreRoute = ExploreRouteImport.update({
-  id: '/explore',
-  path: '/explore',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiNflDatasetsRoute = ApiNflDatasetsRouteImport.update({
-  id: '/api/nfl/datasets',
-  path: '/api/nfl/datasets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiNflDatasetsDatasetIdSchemaRoute =
-  ApiNflDatasetsDatasetIdSchemaRouteImport.update({
-    id: '/$datasetId/schema',
-    path: '/$datasetId/schema',
-    getParentRoute: () => ApiNflDatasetsRoute,
-  } as any)
-const ApiNflDatasetsDatasetIdDataRoute =
-  ApiNflDatasetsDatasetIdDataRouteImport.update({
-    id: '/$datasetId/data',
-    path: '/$datasetId/data',
-    getParentRoute: () => ApiNflDatasetsRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/explore': typeof ExploreRoute
   '/leaderboards': typeof LeaderboardsRoute
   '/nfl': typeof NflRoute
-  '/api/nfl/datasets': typeof ApiNflDatasetsRouteWithChildren
-  '/api/nfl/datasets/$datasetId/data': typeof ApiNflDatasetsDatasetIdDataRoute
-  '/api/nfl/datasets/$datasetId/schema': typeof ApiNflDatasetsDatasetIdSchemaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/explore': typeof ExploreRoute
   '/leaderboards': typeof LeaderboardsRoute
   '/nfl': typeof NflRoute
-  '/api/nfl/datasets': typeof ApiNflDatasetsRouteWithChildren
-  '/api/nfl/datasets/$datasetId/data': typeof ApiNflDatasetsDatasetIdDataRoute
-  '/api/nfl/datasets/$datasetId/schema': typeof ApiNflDatasetsDatasetIdSchemaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/explore': typeof ExploreRoute
   '/leaderboards': typeof LeaderboardsRoute
   '/nfl': typeof NflRoute
-  '/api/nfl/datasets': typeof ApiNflDatasetsRouteWithChildren
-  '/api/nfl/datasets/$datasetId/data': typeof ApiNflDatasetsDatasetIdDataRoute
-  '/api/nfl/datasets/$datasetId/schema': typeof ApiNflDatasetsDatasetIdSchemaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/explore'
-    | '/leaderboards'
-    | '/nfl'
-    | '/api/nfl/datasets'
-    | '/api/nfl/datasets/$datasetId/data'
-    | '/api/nfl/datasets/$datasetId/schema'
+  fullPaths: '/' | '/leaderboards' | '/nfl'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/explore'
-    | '/leaderboards'
-    | '/nfl'
-    | '/api/nfl/datasets'
-    | '/api/nfl/datasets/$datasetId/data'
-    | '/api/nfl/datasets/$datasetId/schema'
-  id:
-    | '__root__'
-    | '/'
-    | '/explore'
-    | '/leaderboards'
-    | '/nfl'
-    | '/api/nfl/datasets'
-    | '/api/nfl/datasets/$datasetId/data'
-    | '/api/nfl/datasets/$datasetId/schema'
+  to: '/' | '/leaderboards' | '/nfl'
+  id: '__root__' | '/' | '/leaderboards' | '/nfl'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ExploreRoute: typeof ExploreRoute
   LeaderboardsRoute: typeof LeaderboardsRoute
   NflRoute: typeof NflRoute
-  ApiNflDatasetsRoute: typeof ApiNflDatasetsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -137,13 +75,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaderboardsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/explore': {
-      id: '/explore'
-      path: '/explore'
-      fullPath: '/explore'
-      preLoaderRoute: typeof ExploreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -151,50 +82,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/nfl/datasets': {
-      id: '/api/nfl/datasets'
-      path: '/api/nfl/datasets'
-      fullPath: '/api/nfl/datasets'
-      preLoaderRoute: typeof ApiNflDatasetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/nfl/datasets/$datasetId/schema': {
-      id: '/api/nfl/datasets/$datasetId/schema'
-      path: '/$datasetId/schema'
-      fullPath: '/api/nfl/datasets/$datasetId/schema'
-      preLoaderRoute: typeof ApiNflDatasetsDatasetIdSchemaRouteImport
-      parentRoute: typeof ApiNflDatasetsRoute
-    }
-    '/api/nfl/datasets/$datasetId/data': {
-      id: '/api/nfl/datasets/$datasetId/data'
-      path: '/$datasetId/data'
-      fullPath: '/api/nfl/datasets/$datasetId/data'
-      preLoaderRoute: typeof ApiNflDatasetsDatasetIdDataRouteImport
-      parentRoute: typeof ApiNflDatasetsRoute
-    }
   }
 }
 
-interface ApiNflDatasetsRouteChildren {
-  ApiNflDatasetsDatasetIdDataRoute: typeof ApiNflDatasetsDatasetIdDataRoute
-  ApiNflDatasetsDatasetIdSchemaRoute: typeof ApiNflDatasetsDatasetIdSchemaRoute
-}
-
-const ApiNflDatasetsRouteChildren: ApiNflDatasetsRouteChildren = {
-  ApiNflDatasetsDatasetIdDataRoute: ApiNflDatasetsDatasetIdDataRoute,
-  ApiNflDatasetsDatasetIdSchemaRoute: ApiNflDatasetsDatasetIdSchemaRoute,
-}
-
-const ApiNflDatasetsRouteWithChildren = ApiNflDatasetsRoute._addFileChildren(
-  ApiNflDatasetsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ExploreRoute: ExploreRoute,
   LeaderboardsRoute: LeaderboardsRoute,
   NflRoute: NflRoute,
-  ApiNflDatasetsRoute: ApiNflDatasetsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

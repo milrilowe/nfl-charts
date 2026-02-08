@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useMemo, useCallback } from 'react'
-import { useTeamsData } from '@/lib/nfl-queries'
+import { useTeamsMeta } from '@/lib/nfl-queries'
+import type { TeamMeta } from '@/lib/nfl-api'
 
 export interface TeamInfo {
   team_abbr: string
@@ -24,19 +25,19 @@ const TeamContext = createContext<TeamContextValue | null>(null)
 
 export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
-  const teamsQuery = useTeamsData()
+  const teamsQuery = useTeamsMeta()
 
   const allTeams: TeamInfo[] = useMemo(() => {
     if (!teamsQuery.data?.data) return []
-    return teamsQuery.data.data.map((row) => ({
-      team_abbr: String(row.team_abbr ?? ''),
-      team_name: String(row.team_name ?? ''),
-      team_nick: String(row.team_nick ?? ''),
-      team_conf: String(row.team_conf ?? ''),
-      team_division: String(row.team_division ?? ''),
-      team_color: String(row.team_color ?? '#6b7280'),
-      team_color2: String(row.team_color2 ?? '#374151'),
-      team_logo_espn: String(row.team_logo_espn ?? ''),
+    return teamsQuery.data.data.map((row: TeamMeta) => ({
+      team_abbr: row.team_abbr,
+      team_name: row.team_name,
+      team_nick: row.team_nick,
+      team_conf: row.team_conf,
+      team_division: row.team_division,
+      team_color: row.team_color || '#6b7280',
+      team_color2: row.team_color2 || '#374151',
+      team_logo_espn: row.team_logo_espn || '',
     }))
   }, [teamsQuery.data])
 

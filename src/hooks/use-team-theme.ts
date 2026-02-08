@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useTeamContext } from '@/contexts/team-context'
 
-const DEFAULT_PRIMARY = '#06b6d4'
-const DEFAULT_SECONDARY = '#0891b2'
+const DEFAULT_PRIMARY = '#013369'
+const DEFAULT_SECONDARY = '#D50A0A'
 
 export function useTeamTheme() {
   const { teamInfo } = useTeamContext()

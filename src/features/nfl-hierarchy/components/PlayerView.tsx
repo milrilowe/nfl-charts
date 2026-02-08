@@ -10,6 +10,8 @@ import {
 import type { EnrichedPlayer } from '@/features/leaderboards/hooks/use-leaderboard'
 import type { HierarchySearch, TeamMeta } from '../types'
 import { STAT_CATEGORIES, formatStatValue } from '@/features/leaderboards/stat-columns'
+import { useTheme } from '@/contexts/theme-context'
+import { useChartTheme } from '@/hooks/use-chart-theme'
 
 interface PlayerViewProps {
   player: EnrichedPlayer
@@ -24,6 +26,9 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
   const teamColor2 = meta?.team_color2 ?? '#374151'
   const categoryConfig = STAT_CATEGORIES[search.category]
   const statDef = categoryConfig?.stats.find((s) => s.key === search.stat)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const chartTheme = useChartTheme()
 
   // All stats for this player across all categories
   const allStats = Object.values(STAT_CATEGORIES).flatMap((cat) => cat.stats)
@@ -55,7 +60,7 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
       <div
         className="relative overflow-hidden rounded-xl p-6"
         style={{
-          background: `linear-gradient(135deg, ${teamColor}50 0%, ${teamColor2}30 50%, rgba(17,24,39,0.9) 80%)`,
+          background: `linear-gradient(135deg, ${teamColor}50 0%, ${teamColor2}30 50%, ${isDark ? 'rgba(17,24,39,0.9)' : 'rgba(255,255,255,0.9)'} 80%)`,
         }}
       >
         {/* Watermark */}
@@ -73,7 +78,7 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
             <img
               src={player.headshot_url}
               alt={player.player_name}
-              className="h-24 w-24 rounded-xl object-cover bg-gray-700 border-2 shadow-lg"
+              className="h-24 w-24 rounded-xl object-cover bg-muted border-2 shadow-lg"
               style={{ borderColor: teamColor }}
             />
           ) : meta?.team_logo ? (
@@ -81,10 +86,10 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
           ) : null}
 
           <div>
-            <h2 className="font-display text-3xl font-extrabold uppercase tracking-wide text-white">
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-wide text-foreground">
               {player.player_name}
             </h2>
-            <p className="font-display text-sm uppercase tracking-wider text-gray-300 flex items-center gap-2">
+            <p className="font-display text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               {meta?.team_logo && (
                 <img src={meta.team_logo} alt="" className="h-5 w-5 inline" />
               )}
@@ -114,7 +119,7 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
               className={`rounded-lg px-3 py-2 transition-colors ${
                 s.key === search.stat
                   ? 'border'
-                  : 'bg-gray-800/50 border border-gray-700/50'
+                  : 'bg-card/50 border border-border/50'
               }`}
               style={
                 s.key === search.stat
@@ -125,10 +130,10 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
                   : undefined
               }
             >
-              <div className="font-display text-xs uppercase tracking-wider text-gray-400">{s.label}</div>
+              <div className="font-display text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>
               <div
                 className={`font-display text-xl font-bold tabular-nums ${
-                  s.key === search.stat ? '' : 'text-gray-200'
+                  s.key === search.stat ? '' : 'text-foreground'
                 }`}
                 style={s.key === search.stat ? { color: teamColor } : undefined}
               >
@@ -144,11 +149,11 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
         <div
           className="rounded-xl border p-4"
           style={{
-            backgroundColor: 'rgba(31,41,55,0.3)',
+            backgroundColor: isDark ? 'rgba(31,41,55,0.3)' : 'rgba(241,245,249,0.5)',
             borderColor: `${teamColor}20`,
           }}
         >
-          <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
+          <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             vs. Top {player.position}s — {statDef?.label ?? search.stat}
           </h3>
           <ResponsiveContainer
@@ -162,24 +167,24 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
             >
               <XAxis
                 type="number"
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                axisLine={{ stroke: '#374151' }}
-                tickLine={{ stroke: '#374151' }}
+                tick={{ fill: chartTheme.tickFill, fontSize: 12 }}
+                axisLine={{ stroke: chartTheme.axisStroke }}
+                tickLine={{ stroke: chartTheme.axisStroke }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={140}
-                tick={{ fill: '#d1d5db', fontSize: 12 }}
-                axisLine={{ stroke: '#374151' }}
+                tick={{ fill: chartTheme.tickSecondaryFill, fontSize: 12 }}
+                axisLine={{ stroke: chartTheme.axisStroke }}
                 tickLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#111827',
+                  backgroundColor: chartTheme.tooltipBg,
                   border: `1px solid ${teamColor}40`,
                   borderRadius: '8px',
-                  color: '#f3f4f6',
+                  color: chartTheme.tooltipText,
                 }}
                 formatter={(value) => [
                   formatStatValue(value, statDef?.format ?? 'number'),

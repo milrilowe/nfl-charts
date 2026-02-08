@@ -13,7 +13,7 @@ interface HierarchyPageProps {
 }
 
 export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
-  const { players, teams, teamLookup, teamMeta, isLoading, error } =
+  const { players, teamLookup, teamMeta, isLoading, error } =
     useHierarchyData(search.year)
 
   // Find current team and player for breadcrumbs + views
@@ -88,10 +88,12 @@ export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
           />
         ) : (
           <LeagueView
-            teams={teams}
+            players={players}
             search={search}
             onSearchChange={onSearchChange}
-            onSelectTeam={(abbr) => onSearchChange({ team: abbr })}
+            onSelectPlayer={(playerId, team) =>
+              onSearchChange({ player: playerId, team })
+            }
           />
         )}
       </div>

@@ -1,14 +1,18 @@
 import { Link } from '@tanstack/react-router'
 import { TeamSelector } from './TeamSelector'
+import { ThemeToggle } from './ThemeToggle'
 import { useTeamContext } from '@/contexts/team-context'
+import { useTheme } from '@/contexts/theme-context'
 
 const navLinkClass =
-  'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider hover:bg-white/10 transition-colors text-gray-300'
+  'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider hover:bg-accent transition-colors text-muted-foreground'
 const navLinkActiveClass =
-  'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider bg-team-primary hover:brightness-110 transition-all text-white'
+  'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider bg-team-primary hover:brightness-110 transition-all text-white border-b-2 border-nfl-red'
 
 export default function Header() {
   const { teamInfo } = useTeamContext()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
     <header className="relative overflow-hidden z-20">
@@ -17,8 +21,12 @@ export default function Header() {
         className="absolute inset-0 transition-all duration-500"
         style={{
           background: teamInfo
-            ? `linear-gradient(135deg, ${teamInfo.team_color}90 0%, ${teamInfo.team_color2}60 40%, #111827 70%)`
-            : 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+            ? isDark
+              ? `linear-gradient(135deg, ${teamInfo.team_color}90 0%, ${teamInfo.team_color2}60 40%, #111827 70%)`
+              : `linear-gradient(135deg, ${teamInfo.team_color}30 0%, ${teamInfo.team_color2}18 40%, white 70%)`
+            : isDark
+              ? 'linear-gradient(135deg, #013369 0%, #111827 70%)'
+              : 'linear-gradient(135deg, #013369 0%, white 70%)',
         }}
       />
 
@@ -42,7 +50,7 @@ export default function Header() {
           />
         )}
 
-        <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
+        <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-foreground">
           <Link to="/">NFL Charts</Link>
         </h1>
 
@@ -65,14 +73,9 @@ export default function Header() {
           >
             Leaderboards
           </Link>
-          <Link
-            to="/explore"
-            className={navLinkClass}
-            activeProps={{ className: navLinkActiveClass }}
-          >
-            Explore
-          </Link>
         </nav>
+
+        <ThemeToggle />
       </div>
 
       {/* Accent stripe */}
@@ -81,7 +84,7 @@ export default function Header() {
         style={{
           background: teamInfo
             ? `linear-gradient(90deg, ${teamInfo.team_color}, ${teamInfo.team_color2})`
-            : 'linear-gradient(90deg, #374151, #1f2937)',
+            : 'linear-gradient(90deg, #013369, #D50A0A)',
         }}
       />
     </header>

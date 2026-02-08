@@ -36,7 +36,7 @@ export function LeaderboardTable({
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32 text-gray-400">
+      <div className="flex items-center justify-center h-32 text-muted-foreground">
         No data available
       </div>
     )
@@ -45,12 +45,12 @@ export function LeaderboardTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow className="border-gray-700 hover:bg-transparent">
-          <TableHead className="w-12 text-gray-400">#</TableHead>
+        <TableRow className="border-border hover:bg-transparent">
+          <TableHead className="w-12 text-muted-foreground">#</TableHead>
           {columns.map((col) => (
             <TableHead
               key={col}
-              className={`text-gray-400 ${col === statKey ? 'text-team-primary font-semibold' : ''}`}
+              className={`text-muted-foreground ${col === statKey ? 'text-team-primary font-semibold' : ''}`}
             >
               {COLUMN_LABELS[col] ?? col}
             </TableHead>
@@ -64,13 +64,13 @@ export function LeaderboardTable({
           return (
             <TableRow
               key={player.player_id || index}
-              className={`border-gray-700/50 ${
+              className={`border-border/50 ${
                 index < topN
                   ? 'bg-team-primary/10 hover:bg-team-primary/15'
-                  : 'hover:bg-gray-800/50'
+                  : 'hover:bg-accent/50'
               }`}
             >
-              <TableCell className="font-display font-bold text-gray-500">
+              <TableCell className="font-display font-bold text-muted-foreground">
                 {index + 1}
               </TableCell>
               {columns.map((col) => {
@@ -96,12 +96,12 @@ export function LeaderboardTable({
                     key={col}
                     className={`${
                       col === 'player_name'
-                        ? 'font-display font-semibold text-gray-100'
+                        ? 'font-display font-semibold text-foreground'
                         : col === statKey
                           ? 'text-team-primary font-semibold font-display tabular-nums'
                           : col === 'team'
                             ? ''
-                            : 'text-gray-300'
+                            : 'text-muted-foreground'
                     }`}
                   >
                     {col === 'player_name' ? (
@@ -110,7 +110,7 @@ export function LeaderboardTable({
                           <img
                             src={player.headshot_url}
                             alt=""
-                            className="h-8 w-8 rounded-full object-cover bg-gray-700"
+                            className="h-8 w-8 rounded-full object-cover bg-muted"
                             loading="lazy"
                           />
                         )}

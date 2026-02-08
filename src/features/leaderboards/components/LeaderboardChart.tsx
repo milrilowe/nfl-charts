@@ -10,6 +10,7 @@ import {
 import type { EnrichedPlayer } from '../hooks/use-leaderboard'
 import { STAT_CATEGORIES, formatStatValue } from '../stat-columns'
 import { useTeamContext } from '@/contexts/team-context'
+import { useChartTheme } from '@/hooks/use-chart-theme'
 
 interface LeaderboardChartProps {
   data: EnrichedPlayer[]
@@ -27,6 +28,7 @@ export function LeaderboardChart({
   )
   const statLabel = statDef?.label ?? statKey
   const { allTeams } = useTeamContext()
+  const chartTheme = useChartTheme()
 
   const teamColorMap = new Map(allTeams.map((t) => [t.team_abbr, t.team_color]))
 
@@ -38,7 +40,7 @@ export function LeaderboardChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
         No data available
       </div>
     )
@@ -53,24 +55,24 @@ export function LeaderboardChart({
       >
         <XAxis
           type="number"
-          tick={{ fill: '#9ca3af', fontSize: 12 }}
-          axisLine={{ stroke: '#374151' }}
-          tickLine={{ stroke: '#374151' }}
+          tick={{ fill: chartTheme.tickFill, fontSize: 12 }}
+          axisLine={{ stroke: chartTheme.axisStroke }}
+          tickLine={{ stroke: chartTheme.axisStroke }}
         />
         <YAxis
           type="category"
           dataKey="name"
           width={160}
-          tick={{ fill: '#d1d5db', fontSize: 12 }}
-          axisLine={{ stroke: '#374151' }}
+          tick={{ fill: chartTheme.tickSecondaryFill, fontSize: 12 }}
+          axisLine={{ stroke: chartTheme.axisStroke }}
           tickLine={false}
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#111827',
-            border: '1px solid rgba(255,255,255,0.1)',
+            backgroundColor: chartTheme.tooltipBg,
+            border: `1px solid ${chartTheme.tooltipBorder}`,
             borderRadius: '8px',
-            color: '#f3f4f6',
+            color: chartTheme.tooltipText,
           }}
           formatter={(value) => [
             formatStatValue(value, statDef?.format ?? 'number'),
@@ -85,7 +87,7 @@ export function LeaderboardChart({
           {chartData.map((entry, index) => (
             <Cell
               key={index}
-              fill={teamColorMap.get(entry.team) || '#06b6d4'}
+              fill={teamColorMap.get(entry.team) || '#013369'}
               fillOpacity={1 - index * (0.3 / Math.max(chartData.length, 1))}
             />
           ))}

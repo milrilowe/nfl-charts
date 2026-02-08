@@ -26,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useTheme } from '@/contexts/theme-context'
+import { useChartTheme } from '@/hooks/use-chart-theme'
 
 interface TeamViewProps {
   team: AggregatedTeam
@@ -47,6 +49,9 @@ export function TeamView({
   const categoryConfig = STAT_CATEGORIES[search.category]
   const statDef = categoryConfig?.stats.find((s) => s.key === search.stat)
   const columns = categoryConfig?.tableColumns ?? []
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const chartTheme = useChartTheme()
 
   // Sort players by current stat
   const sorted = [...players].sort(
@@ -84,7 +89,7 @@ export function TeamView({
       <div
         className="relative overflow-hidden rounded-xl p-6"
         style={{
-          background: `linear-gradient(135deg, ${team.team_color}50 0%, ${team.team_color2}30 50%, rgba(17,24,39,0.9) 80%)`,
+          background: `linear-gradient(135deg, ${team.team_color}50 0%, ${team.team_color2}30 50%, ${isDark ? 'rgba(17,24,39,0.9)' : 'rgba(255,255,255,0.9)'} 80%)`,
         }}
       >
         {/* Watermark */}
@@ -105,10 +110,10 @@ export function TeamView({
             />
           )}
           <div>
-            <h2 className="font-display text-3xl font-extrabold uppercase tracking-wide text-white">
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-wide text-foreground">
               {team.team_name}
             </h2>
-            <p className="font-display text-sm uppercase tracking-wider text-gray-300">
+            <p className="font-display text-sm uppercase tracking-wider text-muted-foreground">
               {team.team_conf} {team.team_division.replace(team.team_conf + ' ', '')} &middot; {team.player_count} players
             </p>
           </div>
@@ -129,7 +134,7 @@ export function TeamView({
             className={`rounded-lg px-3 py-2 text-center transition-colors ${
               s.key === search.stat
                 ? 'border'
-                : 'bg-gray-800/50 border border-gray-700/50'
+                : 'bg-card/50 border border-border/50'
             }`}
             style={
               s.key === search.stat
@@ -140,10 +145,10 @@ export function TeamView({
                 : undefined
             }
           >
-            <div className="font-display text-xs uppercase tracking-wider text-gray-400">{s.label}</div>
+            <div className="font-display text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>
             <div
               className={`font-display text-xl font-bold tabular-nums ${
-                s.key === search.stat ? '' : 'text-gray-200'
+                s.key === search.stat ? '' : 'text-foreground'
               }`}
               style={s.key === search.stat ? { color: team.team_color } : undefined}
             >
@@ -155,7 +160,7 @@ export function TeamView({
 
       {/* Category + Stat selectors */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-lg bg-gray-800/50 p-1">
+        <div className="flex gap-1 rounded-lg bg-card/50 p-1">
           {Object.entries(STAT_CATEGORIES).map(([key, cat]) => (
             <button
               key={key}
@@ -168,7 +173,7 @@ export function TeamView({
               className={`rounded-md px-3 py-1.5 text-sm font-display font-semibold uppercase tracking-wider transition-colors ${
                 search.category === key
                   ? 'text-white'
-                  : 'text-gray-400 hover:text-gray-200'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               style={
                 search.category === key
@@ -184,10 +189,10 @@ export function TeamView({
           value={search.stat}
           onValueChange={(v) => onSearchChange({ stat: v })}
         >
-          <SelectTrigger className="w-44 bg-gray-800 border-gray-700">
+          <SelectTrigger className="w-44 bg-card border-border">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-gray-800 border-gray-700">
+          <SelectContent className="bg-card border-border">
             {categoryConfig?.stats.map((s) => (
               <SelectItem key={s.key} value={s.key}>
                 {s.label}
@@ -202,11 +207,11 @@ export function TeamView({
         <div
           className="rounded-xl border p-4"
           style={{
-            backgroundColor: 'rgba(31,41,55,0.3)',
+            backgroundColor: isDark ? 'rgba(31,41,55,0.3)' : 'rgba(241,245,249,0.5)',
             borderColor: `${team.team_color}20`,
           }}
         >
-          <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
+          <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Top Players — {statDef?.label ?? search.stat}
           </h3>
           <ResponsiveContainer
@@ -220,24 +225,24 @@ export function TeamView({
             >
               <XAxis
                 type="number"
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                axisLine={{ stroke: '#374151' }}
-                tickLine={{ stroke: '#374151' }}
+                tick={{ fill: chartTheme.tickFill, fontSize: 12 }}
+                axisLine={{ stroke: chartTheme.axisStroke }}
+                tickLine={{ stroke: chartTheme.axisStroke }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={140}
-                tick={{ fill: '#d1d5db', fontSize: 12 }}
-                axisLine={{ stroke: '#374151' }}
+                tick={{ fill: chartTheme.tickSecondaryFill, fontSize: 12 }}
+                axisLine={{ stroke: chartTheme.axisStroke }}
                 tickLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#111827',
+                  backgroundColor: chartTheme.tooltipBg,
                   border: `1px solid ${team.team_color}40`,
                   borderRadius: '8px',
-                  color: '#f3f4f6',
+                  color: chartTheme.tooltipText,
                 }}
                 formatter={(value) => [
                   formatStatValue(value, statDef?.format ?? 'number'),
@@ -262,19 +267,19 @@ export function TeamView({
       <div className="space-y-4">
         {positionGroups.map(([position, posPlayers]) => (
           <div key={position}>
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {position}
             </h3>
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-700 hover:bg-transparent">
-                  <TableHead className="w-12 text-gray-400">#</TableHead>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="w-12 text-muted-foreground">#</TableHead>
                   {columns
                     .filter((c) => c !== 'team' && c !== 'position')
                     .map((col) => (
                       <TableHead
                         key={col}
-                        className={`text-gray-400 ${
+                        className={`text-muted-foreground ${
                           col === search.stat
                             ? 'font-semibold'
                             : ''
@@ -290,10 +295,10 @@ export function TeamView({
                 {posPlayers.map((player, idx) => (
                   <TableRow
                     key={player.player_id}
-                    className="border-gray-700/50 hover:bg-gray-800/50 cursor-pointer"
+                    className="border-border/50 hover:bg-accent/50 cursor-pointer"
                     onClick={() => onSelectPlayer(player.player_id)}
                   >
-                    <TableCell className="font-display font-bold text-gray-500">
+                    <TableCell className="font-display font-bold text-muted-foreground">
                       {idx + 1}
                     </TableCell>
                     {columns
@@ -312,10 +317,10 @@ export function TeamView({
                             key={col}
                             className={
                               col === 'player_name'
-                                ? 'font-display font-semibold text-gray-100'
+                                ? 'font-display font-semibold text-foreground'
                                 : col === search.stat
                                   ? 'font-semibold font-display tabular-nums'
-                                  : 'text-gray-300'
+                                  : 'text-muted-foreground'
                             }
                             style={col === search.stat ? { color: team.team_color } : undefined}
                           >
@@ -325,7 +330,7 @@ export function TeamView({
                                   <img
                                     src={player.headshot_url}
                                     alt=""
-                                    className="h-7 w-7 rounded-full object-cover bg-gray-700"
+                                    className="h-7 w-7 rounded-full object-cover bg-muted"
                                     loading="lazy"
                                   />
                                 )}

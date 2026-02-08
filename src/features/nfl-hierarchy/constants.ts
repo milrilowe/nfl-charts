@@ -16,6 +16,17 @@ export const NFL_GRID: Record<string, Record<string, string[]>> = {
 export const DIVISION_ORDER = ['East', 'North', 'South', 'West'] as const
 export const CONFERENCE_ORDER = ['AFC', 'NFC'] as const
 
+export const LEADERBOARD_STATS = [
+  { key: 'passing_yards', label: 'Passing Yards', format: 'number' as const },
+  { key: 'passing_tds', label: 'Passing TDs', format: 'number' as const },
+  { key: 'rushing_yards', label: 'Rushing Yards', format: 'number' as const },
+  { key: 'rushing_tds', label: 'Rushing TDs', format: 'number' as const },
+  { key: 'receiving_yards', label: 'Receiving Yards', format: 'number' as const },
+  { key: 'receiving_tds', label: 'Receiving TDs', format: 'number' as const },
+  { key: 'receptions', label: 'Receptions', format: 'number' as const },
+  { key: 'fantasy_points', label: 'Fantasy Points', format: 'number' as const },
+]
+
 export const TEAM_STATS = [
   { key: 'total_yards', label: 'Total Yards', format: 'number' as const },
   { key: 'total_tds', label: 'Total TDs', format: 'number' as const },
