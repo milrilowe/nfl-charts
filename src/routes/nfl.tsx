@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, stripSearchParams } from '@tanstack/react-router'
 import { z } from 'zod'
 import { HierarchyPage } from '@/features/nfl-hierarchy'
+import { useTeamSync } from '@/hooks/use-team-sync'
 
 const searchDefaults = {
   year: 2024,
@@ -31,12 +32,14 @@ function RouteComponent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
+  const handleSearchChange = (updates: Partial<typeof search>) =>
+    navigate({ search: (prev) => ({ ...prev, ...updates }) })
+
+  useTeamSync(search.team, (team) =>
+    handleSearchChange({ team, player: undefined }),
+  )
+
   return (
-    <HierarchyPage
-      search={search}
-      onSearchChange={(updates) =>
-        navigate({ search: (prev) => ({ ...prev, ...updates }) })
-      }
-    />
+    <HierarchyPage search={search} onSearchChange={handleSearchChange} />
   )
 }

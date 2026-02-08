@@ -6,6 +6,7 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 import Header from '../components/Header'
+import { TeamProvider } from '../contexts/team-context'
 import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
@@ -28,13 +29,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
       <body>
-        <Header />
-        {children}
+        <TeamProvider>
+          <Header />
+          {children}
+        </TeamProvider>
         <ReactQueryDevtools initialIsOpen={false} />
         <Scripts />
       </body>

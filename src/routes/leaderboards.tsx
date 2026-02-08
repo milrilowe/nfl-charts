@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { LeaderboardsPage } from '@/features/leaderboards'
+import { useTeamSync } from '@/hooks/use-team-sync'
 
 const leaderboardSearch = z.object({
   year: z.number().int().min(1999).max(2026).default(2024).catch(2024),
@@ -27,12 +28,12 @@ function RouteComponent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
+  const handleSearchChange = (updates: Partial<typeof search>) =>
+    navigate({ search: (prev) => ({ ...prev, ...updates }) })
+
+  useTeamSync(search.team, (team) => handleSearchChange({ team }))
+
   return (
-    <LeaderboardsPage
-      search={search}
-      onSearchChange={(updates) =>
-        navigate({ search: (prev) => ({ ...prev, ...updates }) })
-      }
-    />
+    <LeaderboardsPage search={search} onSearchChange={handleSearchChange} />
   )
 }
