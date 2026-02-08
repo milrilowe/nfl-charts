@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LeaderboardsRouteImport } from './routes/leaderboards'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiNflDatasetsRouteImport } from './routes/api/nfl/datasets'
 import { Route as ApiNflDatasetsDatasetIdSchemaRouteImport } from './routes/api/nfl/datasets.$datasetId.schema'
 import { Route as ApiNflDatasetsDatasetIdDataRouteImport } from './routes/api/nfl/datasets.$datasetId.data'
 
+const LeaderboardsRoute = LeaderboardsRouteImport.update({
+  id: '/leaderboards',
+  path: '/leaderboards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
@@ -46,6 +52,7 @@ const ApiNflDatasetsDatasetIdDataRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
+  '/leaderboards': typeof LeaderboardsRoute
   '/api/nfl/datasets': typeof ApiNflDatasetsRouteWithChildren
   '/api/nfl/datasets/$datasetId/data': typeof ApiNflDatasetsDatasetIdDataRoute
   '/api/nfl/datasets/$datasetId/schema': typeof ApiNflDatasetsDatasetIdSchemaRoute
@@ -53,6 +60,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
+  '/leaderboards': typeof LeaderboardsRoute
   '/api/nfl/datasets': typeof ApiNflDatasetsRouteWithChildren
   '/api/nfl/datasets/$datasetId/data': typeof ApiNflDatasetsDatasetIdDataRoute
   '/api/nfl/datasets/$datasetId/schema': typeof ApiNflDatasetsDatasetIdSchemaRoute
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
+  '/leaderboards': typeof LeaderboardsRoute
   '/api/nfl/datasets': typeof ApiNflDatasetsRouteWithChildren
   '/api/nfl/datasets/$datasetId/data': typeof ApiNflDatasetsDatasetIdDataRoute
   '/api/nfl/datasets/$datasetId/schema': typeof ApiNflDatasetsDatasetIdSchemaRoute
@@ -70,6 +79,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/explore'
+    | '/leaderboards'
     | '/api/nfl/datasets'
     | '/api/nfl/datasets/$datasetId/data'
     | '/api/nfl/datasets/$datasetId/schema'
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/explore'
+    | '/leaderboards'
     | '/api/nfl/datasets'
     | '/api/nfl/datasets/$datasetId/data'
     | '/api/nfl/datasets/$datasetId/schema'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/explore'
+    | '/leaderboards'
     | '/api/nfl/datasets'
     | '/api/nfl/datasets/$datasetId/data'
     | '/api/nfl/datasets/$datasetId/schema'
@@ -92,11 +104,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExploreRoute: typeof ExploreRoute
+  LeaderboardsRoute: typeof LeaderboardsRoute
   ApiNflDatasetsRoute: typeof ApiNflDatasetsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/leaderboards': {
+      id: '/leaderboards'
+      path: '/leaderboards'
+      fullPath: '/leaderboards'
+      preLoaderRoute: typeof LeaderboardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/explore': {
       id: '/explore'
       path: '/explore'
@@ -152,6 +172,7 @@ const ApiNflDatasetsRouteWithChildren = ApiNflDatasetsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExploreRoute: ExploreRoute,
+  LeaderboardsRoute: LeaderboardsRoute,
   ApiNflDatasetsRoute: ApiNflDatasetsRouteWithChildren,
 }
 export const routeTree = rootRouteImport

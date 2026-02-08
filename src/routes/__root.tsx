@@ -3,6 +3,7 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 import Header from '../components/Header'
 import appCss from '../styles.css?url'
@@ -34,6 +35,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <Header />
         {children}
+        <ReactQueryDevtools initialIsOpen={false} />
         <Scripts />
       </body>
     </html>
