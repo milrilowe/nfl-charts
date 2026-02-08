@@ -1,0 +1,25 @@
+{
+  "projectName": "asd",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "pnpm",
+  "tailwind": true,
+  "addOnOptions": {
+    "drizzle": {
+      "database": "sqlite"
+    }
+  },
+  "git": true,
+  "version": 1,
+  "framework": "react-cra",
+  "chosenAddOns": [
+    "eslint",
+    "nitro",
+    "start",
+    "shadcn",
+    "t3env",
+    "table",
+    "tanstack-query",
+    "drizzle"
+  ]
+}
