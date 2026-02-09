@@ -7,21 +7,30 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import type { EnrichedPlayer } from '@/features/leaderboards/hooks/use-leaderboard'
+import { usePlayerDetail } from '@/lib/nfl-queries'
 import type { HierarchySearch, TeamMeta } from '../types'
 import { STAT_CATEGORIES, formatStatValue } from '@/features/leaderboards/stat-columns'
 import { useTheme } from '@/contexts/theme-context'
 import { useChartTheme } from '@/hooks/use-chart-theme'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface PlayerViewProps {
-  player: EnrichedPlayer
-  peers: EnrichedPlayer[] // same position, for comparison
+  year: number
+  playerId: string
   teamMeta: Map<string, TeamMeta>
   search: HierarchySearch
 }
 
-export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps) {
-  const meta = teamMeta.get(player.team)
+export function PlayerView({ year, playerId, teamMeta, search }: PlayerViewProps) {
+  const detailQuery = usePlayerDetail(playerId, year, search.stat)
+  const player = detailQuery.data?.player
+  const chartData = detailQuery.data?.peers?.map((p) => ({
+    name: p.player_name,
+    value: p.value,
+    isTarget: p.is_target,
+  })) ?? []
+
+  const meta = player ? teamMeta.get(player.team) : undefined
   const teamColor = meta?.team_color ?? '#6b7280'
   const teamColor2 = meta?.team_color2 ?? '#374151'
   const categoryConfig = STAT_CATEGORIES[search.category]
@@ -30,28 +39,16 @@ export function PlayerView({ player, peers, teamMeta, search }: PlayerViewProps)
   const isDark = theme === 'dark'
   const chartTheme = useChartTheme()
 
-  // All stats for this player across all categories
   const allStats = Object.values(STAT_CATEGORIES).flatMap((cat) => cat.stats)
 
-  // Comparison chart: this player vs top 10 at same position
-  const top10 = peers
-    .sort((a, b) => (Number(b[search.stat]) || 0) - (Number(a[search.stat]) || 0))
-    .slice(0, 10)
-
-  const chartData = top10.map((p) => ({
-    name: p.player_name,
-    value: Number(p[search.stat]) || 0,
-    isTarget: p.player_id === player.player_id,
-  }))
-
-  // Make sure our player is in the chart even if not top 10
-  const inChart = chartData.some((d) => d.isTarget)
-  if (!inChart) {
-    chartData.push({
-      name: player.player_name,
-      value: Number(player[search.stat]) || 0,
-      isTarget: true,
-    })
+  if (detailQuery.isLoading || !player) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
   }
 
   return (

@@ -51,8 +51,9 @@ function AmbientGlow() {
   const { teamInfo } = useTeamContext()
   return (
     <div
-      className="pointer-events-none fixed inset-0 transition-opacity duration-700 z-0"
+      className="pointer-events-none fixed inset-0 transition-opacity duration-700 z-0 will-change-opacity"
       style={{
+        contain: 'layout style',
         background: `radial-gradient(ellipse at top, ${teamInfo ? teamInfo.team_color : '#013369'}18 0%, transparent 50%)`,
       }}
     />

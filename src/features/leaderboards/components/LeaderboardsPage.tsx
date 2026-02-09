@@ -7,6 +7,7 @@ import { LeaderboardChart } from './LeaderboardChart'
 import { LeaderboardTable } from './LeaderboardTable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAvailableYears } from '@/lib/nfl-queries'
 
 type Category = 'passing' | 'rushing' | 'receiving'
 type Conference = 'AFC' | 'NFC'
@@ -34,6 +35,8 @@ export function LeaderboardsPage({
 
   const { data, isLoading, error, availablePositions, availableTeams } =
     useLeaderboardData(year)
+  const { data: yearsData } = useAvailableYears()
+  const maxYear = yearsData?.latest ?? 2024
 
   const filtered = useMemo(
     () => filterAndSort(data, { stat, position, team, conference }),
@@ -63,6 +66,7 @@ export function LeaderboardsPage({
 
         <LeaderboardFilters
           year={year}
+          maxYear={maxYear}
           category={category}
           stat={stat}
           topN={topN}

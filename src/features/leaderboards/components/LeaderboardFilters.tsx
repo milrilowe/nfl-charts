@@ -9,6 +9,7 @@ import { STAT_CATEGORIES } from '../stat-columns'
 
 interface LeaderboardFiltersProps {
   year: number
+  maxYear: number
   category: string
   stat: string
   topN: number
@@ -25,12 +26,11 @@ interface LeaderboardFiltersProps {
   onConferenceChange: (conference: string | undefined) => void
 }
 
-const currentYear = new Date().getFullYear()
-const YEARS = Array.from({ length: currentYear - 1999 + 1 }, (_, i) => currentYear - i)
 const TOP_N_OPTIONS = [10, 15, 20, 25, 50]
 
 export function LeaderboardFilters({
   year,
+  maxYear,
   category,
   stat,
   topN,
@@ -58,7 +58,7 @@ export function LeaderboardFilters({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {YEARS.map((y) => (
+          {Array.from({ length: maxYear - 1999 }, (_, i) => maxYear - i).map((y) => (
             <SelectItem key={y} value={String(y)}>
               {y}
             </SelectItem>

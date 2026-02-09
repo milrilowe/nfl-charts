@@ -1,11 +1,15 @@
 """
 NFL Data API - Purpose-built endpoints for NFL statistics
 """
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 
-from data_service import get_players, get_team_aggregates, get_teams_meta, clear_cache
+from data_service import (
+    get_players, get_team_aggregates, get_teams_meta, clear_cache,
+    get_leaderboards, get_team_roster, get_player_with_peers,
+    get_available_years,
+)
 
 app = FastAPI(
     title="NFL Data API",
@@ -27,6 +31,12 @@ app.add_middleware(
 def root():
     """Health check endpoint"""
     return {"status": "ok", "service": "nfl-data-api"}
+
+
+@app.get("/years")
+def available_years():
+    """Return the latest year with available seasonal data."""
+    return get_available_years()
 
 
 @app.get("/players")
@@ -57,6 +67,31 @@ def players(
     )
 
 
+@app.get("/leaderboards")
+def leaderboards(
+    year: Annotated[int, Query(ge=1999, le=2026)] = 2024,
+    per_stat: Annotated[int, Query(ge=1, le=25)] = 5,
+):
+    """Get top N players for each leaderboard stat category in one response."""
+    return get_leaderboards(year=year, per_stat=per_stat)
+
+
+@app.get("/players/{player_id}")
+def player_detail(
+    player_id: str,
+    year: Annotated[int, Query(ge=1999, le=2026)] = 2024,
+    stat: Annotated[str, Query(description="Stat for peer ranking")] = "fantasy_points",
+    peer_limit: Annotated[int, Query(ge=1, le=25)] = 10,
+):
+    """Get a single player's full stats plus positional peer comparison."""
+    result = get_player_with_peers(
+        player_id=player_id, year=year, stat=stat, peer_limit=peer_limit,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return result
+
+
 @app.get("/teams")
 def teams(
     year: Annotated[int, Query(ge=1999, le=2026)] = 2024,
@@ -74,6 +109,16 @@ def teams_meta():
     Get lightweight team metadata (colors, logos, conference/division) for theming.
     """
     return get_teams_meta()
+
+
+@app.get("/teams/{team_abbr}/roster")
+def team_roster(
+    team_abbr: str,
+    year: Annotated[int, Query(ge=1999, le=2026)] = 2024,
+    sort_by: Annotated[str, Query(description="Stat to sort by")] = "fantasy_points",
+):
+    """Get a team's roster grouped by position with chart data."""
+    return get_team_roster(team_abbr=team_abbr, year=year, sort_by=sort_by)
 
 
 @app.post("/cache/clear")

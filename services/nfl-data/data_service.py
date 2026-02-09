@@ -32,6 +32,38 @@ SUM_KEYS = [
     'fantasy_points', 'fantasy_points_ppr',
 ]
 
+# Stat keys for the league leaderboard endpoint
+LEADERBOARD_STAT_KEYS = [
+    'passing_yards', 'passing_tds', 'rushing_yards', 'rushing_tds',
+    'receiving_yards', 'receiving_tds', 'receptions', 'fantasy_points',
+]
+
+LEADER_COLUMNS = ['player_id', 'player_name', 'position', 'team', 'headshot_url']
+
+POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'FB', 'K', 'P']
+
+# All stat columns to include in roster player records
+ROSTER_STAT_COLUMNS = [
+    'player_id', 'player_name', 'headshot_url', 'position',
+    'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions',
+    'carries', 'rushing_yards', 'rushing_tds',
+    'receptions', 'targets', 'receiving_yards', 'receiving_tds',
+    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
+    'target_share', 'games',
+]
+
+# All stat columns for a single player detail view
+PLAYER_DETAIL_COLUMNS = [
+    'player_id', 'player_name', 'position', 'team', 'headshot_url',
+    'team_name', 'team_nick', 'team_conf', 'team_division',
+    'season', 'completions', 'attempts',
+    'passing_yards', 'passing_tds', 'interceptions',
+    'carries', 'rushing_yards', 'rushing_tds',
+    'receptions', 'targets', 'receiving_yards', 'receiving_tds',
+    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
+    'target_share', 'games',
+]
+
 # Raw dataset definitions for nfl_data_py
 _DATASETS = {
     "seasonal": {
@@ -220,7 +252,139 @@ def get_teams_meta() -> dict[str, Any]:
     }
 
 
+def get_leaderboards(year: int = 2024, per_stat: int = 5) -> dict[str, Any]:
+    """Get top N players for each leaderboard stat in a single response."""
+    df = _get_enriched(year)
+    leaders: dict[str, list[dict]] = {}
+    for stat_key in LEADERBOARD_STAT_KEYS:
+        if stat_key not in df.columns:
+            leaders[stat_key] = []
+            continue
+        top = df.nlargest(per_stat, stat_key)
+        available = [c for c in LEADER_COLUMNS if c in top.columns]
+        records = top[available + [stat_key]].copy()
+        records = records.rename(columns={stat_key: 'value'})
+        leaders[stat_key] = records.to_dict(orient='records')
+    return {"year": year, "leaders": leaders}
+
+
+def get_team_roster(
+    team_abbr: str,
+    year: int = 2024,
+    sort_by: str = 'fantasy_points',
+) -> dict[str, Any]:
+    """Get a team's roster grouped by position with chart data."""
+    df = _get_enriched(year)
+    team_df = df[df['team'] == team_abbr].copy()
+
+    # Sort by requested stat
+    if sort_by in team_df.columns:
+        team_df = team_df.sort_values(sort_by, ascending=False, na_position='last')
+
+    # Chart data: top 10
+    chart_data = [
+        {"name": row["player_name"], "value": float(row.get(sort_by, 0))}
+        for _, row in team_df.head(10).iterrows()
+    ]
+
+    # Position groups with all stat columns
+    available_cols = [c for c in ROSTER_STAT_COLUMNS if c in team_df.columns]
+    groups = []
+    seen_positions: set[str] = set()
+
+    for pos in POSITION_ORDER:
+        pos_df = team_df[team_df['position'] == pos]
+        if pos_df.empty:
+            continue
+        seen_positions.add(pos)
+        groups.append({
+            "position": pos,
+            "players": pos_df[available_cols].to_dict(orient='records'),
+        })
+
+    # Catch positions not in POSITION_ORDER
+    remaining = team_df[~team_df['position'].isin(seen_positions)]
+    for pos, pos_df in remaining.groupby('position'):
+        groups.append({
+            "position": pos,
+            "players": pos_df[available_cols].to_dict(orient='records'),
+        })
+
+    return {
+        "year": year,
+        "team_abbr": team_abbr,
+        "chart_data": chart_data,
+        "position_groups": groups,
+    }
+
+
+def get_player_with_peers(
+    player_id: str,
+    year: int = 2024,
+    stat: str = 'fantasy_points',
+    peer_limit: int = 10,
+) -> dict[str, Any] | None:
+    """Get a single player's full stats plus positional peer comparison."""
+    df = _get_enriched(year)
+    player_row = df[df['player_id'] == player_id]
+    if player_row.empty:
+        return None
+
+    player_record = player_row.iloc[0]
+    available_cols = [c for c in PLAYER_DETAIL_COLUMNS if c in df.columns]
+    player_dict = player_record[available_cols].to_dict()
+
+    # Peer comparison by position
+    position = player_record.get('position', '')
+    peers_list: list[dict] = []
+    if position and stat in df.columns:
+        pos_df = df[df['position'] == position].nlargest(peer_limit, stat)
+        player_in_peers = player_id in pos_df['player_id'].values
+        peers_list = [
+            {
+                "player_id": row['player_id'],
+                "player_name": row['player_name'],
+                "value": float(row.get(stat, 0)),
+                "is_target": row['player_id'] == player_id,
+            }
+            for _, row in pos_df.iterrows()
+        ]
+        if not player_in_peers:
+            peers_list.append({
+                "player_id": player_id,
+                "player_name": str(player_record.get('player_name', '')),
+                "value": float(player_record.get(stat, 0)),
+                "is_target": True,
+            })
+
+    return {
+        "year": year,
+        "player": player_dict,
+        "peers": peers_list,
+    }
+
+
+@lru_cache(maxsize=1)
+def _detect_latest_year() -> int:
+    """Probe nfl_data_py from current year downward to find latest available seasonal data."""
+    from datetime import date
+    current = date.today().year
+    for year in range(current, 1999, -1):
+        try:
+            nfl.import_seasonal_data(years=[year])
+            return year
+        except Exception:
+            continue
+    return 2024
+
+
+def get_available_years() -> dict[str, int]:
+    """Return the latest year with available seasonal data and the minimum year."""
+    return {"latest": _detect_latest_year(), "min": 1999}
+
+
 def clear_cache():
     """Clear all caches"""
     _fetch_raw_cached.cache_clear()
     _build_enriched_df.cache_clear()
+    _detect_latest_year.cache_clear()

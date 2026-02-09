@@ -16,7 +16,7 @@ const NFL_BLUE = '#013369'
 const navLinkClass =
   'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider hover:bg-accent transition-colors text-muted-foreground'
 const navLinkActiveClass =
-  'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider bg-team-primary hover:brightness-110 transition-all text-white border-b-2 border-nfl-red'
+  'px-3 py-2 rounded-lg text-sm font-display font-semibold uppercase tracking-wider bg-team-primary hover:brightness-110 transition-colors text-white border-b-2 border-nfl-red'
 
 export default function Header() {
   const [teamPickerOpen, setTeamPickerOpen] = useState(false)
@@ -62,28 +62,19 @@ export default function Header() {
         <ThemeToggle />
       </div>
 
-      {/* Expanding team picker panel */}
-      <div
-        className="grid transition-[grid-template-rows] duration-200 ease-out"
-        style={{ gridTemplateRows: teamPickerOpen ? '1fr' : '0fr' }}
-      >
-        <div className="overflow-hidden">
-          <div className="border-t border-border px-6 py-4">
+      {/* Team picker panel */}
+      {teamPickerOpen && (
+        <div className="border-t border-border px-6 py-4">
             {/* NFL reset */}
             <button
               onClick={() => selectTeam(null)}
-              className="mb-3 flex items-center gap-2 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors"
+              className="team-btn mb-3 flex items-center gap-2 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors duration-150"
+              data-active={!selectedTeam || undefined}
               style={{
+                '--btn-color': 'var(--color-accent)',
                 backgroundColor: !selectedTeam ? NFL_BLUE : undefined,
                 color: !selectedTeam ? '#ffffff' : undefined,
-              }}
-              onMouseEnter={(e) => {
-                if (selectedTeam)
-                  e.currentTarget.style.backgroundColor = 'var(--color-accent)'
-              }}
-              onMouseLeave={(e) => {
-                if (selectedTeam) e.currentTarget.style.backgroundColor = ''
-              }}
+              } as React.CSSProperties}
             >
               <span
                 className={`font-display text-sm font-bold uppercase tracking-wider ${selectedTeam ? 'text-muted-foreground' : ''}`}
@@ -112,26 +103,15 @@ export default function Header() {
                             <button
                               key={abbr}
                               onClick={() => selectTeam(abbr)}
-                              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 cursor-pointer transition-all duration-150"
+                              className="team-btn flex items-center gap-2 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors duration-150"
+                              data-active={isActive || undefined}
                               style={{
+                                '--btn-color': team.team_color,
                                 backgroundColor: isActive
                                   ? team.team_color
                                   : undefined,
                                 color: isActive ? '#ffffff' : undefined,
-                              }}
-                              onMouseEnter={(e) => {
-                                if (!isActive) {
-                                  e.currentTarget.style.backgroundColor =
-                                    team.team_color
-                                  e.currentTarget.style.color = '#ffffff'
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (!isActive) {
-                                  e.currentTarget.style.backgroundColor = ''
-                                  e.currentTarget.style.color = ''
-                                }
-                              }}
+                              } as React.CSSProperties}
                             >
                               <img
                                 src={team.team_logo_espn}
@@ -154,12 +134,11 @@ export default function Header() {
               )}
             </div>
           </div>
-        </div>
-      </div>
+      )}
 
       {/* Accent stripe */}
       <div
-        className="h-1 transition-all duration-500"
+        className="h-1 transition-colors duration-500"
         style={{
           background: teamInfo
             ? `linear-gradient(90deg, ${teamInfo.team_color}, ${teamInfo.team_color2})`
