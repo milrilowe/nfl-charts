@@ -172,3 +172,8 @@ code {
     @apply bg-background text-foreground;
   }
 }
+
+.team-btn:not([data-active]):hover {
+  background-color: var(--btn-color);
+  color: #ffffff;
+}
