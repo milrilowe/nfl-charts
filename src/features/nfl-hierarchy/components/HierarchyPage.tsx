@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHierarchyData } from '../hooks/use-hierarchy-data'
+import { usePlayerDetail, useAvailableYears } from '@/lib/nfl-queries'
 import { Breadcrumbs } from './Breadcrumbs'
 import { LeagueView } from './LeagueView'
 import { TeamView } from './TeamView'
@@ -13,33 +13,17 @@ interface HierarchyPageProps {
 }
 
 export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
-  const { players, teamLookup, teamMeta, isLoading, error } =
+  const { teamLookup, teamMeta, isLoading, error } =
     useHierarchyData(search.year)
+  const { data: yearsData } = useAvailableYears()
+  const maxYear = yearsData?.latest ?? 2024
 
-  // Find current team and player for breadcrumbs + views
+  // Player name for breadcrumbs — deduped with PlayerView's query by TanStack Query
+  const playerDetail = usePlayerDetail(search.player ?? '', search.year, search.stat, {
+    enabled: !!search.player,
+  })
+
   const currentTeam = search.team ? teamLookup.get(search.team) : undefined
-
-  const teamPlayers = useMemo(
-    () =>
-      search.team ? players.filter((p) => p.team === search.team) : [],
-    [players, search.team]
-  )
-
-  const currentPlayer = useMemo(
-    () =>
-      search.player
-        ? players.find((p) => p.player_id === search.player)
-        : undefined,
-    [players, search.player]
-  )
-
-  const positionalPeers = useMemo(
-    () =>
-      currentPlayer
-        ? players.filter((p) => p.position === currentPlayer.position)
-        : [],
-    [players, currentPlayer]
-  )
 
   if (error) {
     return (
@@ -56,7 +40,7 @@ export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
         <Breadcrumbs
           search={search}
           teamName={currentTeam?.team_name}
-          playerName={currentPlayer?.player_name}
+          playerName={playerDetail.data?.player?.player_name}
           onNavigate={onSearchChange}
         />
 
@@ -69,17 +53,17 @@ export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
               <Skeleton className="h-80" />
             </div>
           </div>
-        ) : search.player && currentPlayer ? (
+        ) : search.player ? (
           <PlayerView
-            player={currentPlayer}
-            peers={positionalPeers}
+            year={search.year}
+            playerId={search.player}
             teamMeta={teamMeta}
             search={search}
           />
         ) : search.team && currentTeam ? (
           <TeamView
             team={currentTeam}
-            players={teamPlayers}
+            year={search.year}
             search={search}
             onSearchChange={onSearchChange}
             onSelectPlayer={(playerId) =>
@@ -88,7 +72,8 @@ export function HierarchyPage({ search, onSearchChange }: HierarchyPageProps) {
           />
         ) : (
           <LeagueView
-            players={players}
+            year={search.year}
+            maxYear={maxYear}
             search={search}
             onSearchChange={onSearchChange}
             onSelectPlayer={(playerId, team) =>

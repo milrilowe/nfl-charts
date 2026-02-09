@@ -125,6 +125,92 @@ interface FetchTeamsParams {
   team?: string
 }
 
+export interface FetchLeaderboardsParams {
+  year: number
+  perStat?: number
+}
+
+export interface FetchTeamRosterParams {
+  teamAbbr: string
+  year: number
+  sortBy?: string
+}
+
+export interface FetchPlayerDetailParams {
+  playerId: string
+  year: number
+  stat?: string
+  peerLimit?: number
+}
+
+// ---------------------------------------------------------------------------
+// Leaderboards types
+// ---------------------------------------------------------------------------
+
+export interface LeaderEntry {
+  player_id: string
+  player_name: string
+  position: string
+  team: string
+  headshot_url: string
+  value: number
+}
+
+export interface LeaderboardsResponse {
+  year: number
+  leaders: Record<string, LeaderEntry[]>
+}
+
+// ---------------------------------------------------------------------------
+// Team roster types
+// ---------------------------------------------------------------------------
+
+export interface RosterPlayer {
+  player_id: string
+  player_name: string
+  headshot_url: string
+  position: string
+  [key: string]: string | number
+}
+
+export interface PositionGroup {
+  position: string
+  players: RosterPlayer[]
+}
+
+export interface TeamRosterResponse {
+  year: number
+  team_abbr: string
+  chart_data: Array<{ name: string; value: number }>
+  position_groups: PositionGroup[]
+}
+
+// ---------------------------------------------------------------------------
+// Player detail types
+// ---------------------------------------------------------------------------
+
+export interface PeerEntry {
+  player_id: string
+  player_name: string
+  value: number
+  is_target: boolean
+}
+
+export interface PlayerDetailResponse {
+  year: number
+  player: EnrichedPlayer
+  peers: PeerEntry[]
+}
+
+// ---------------------------------------------------------------------------
+// Available years types
+// ---------------------------------------------------------------------------
+
+export interface AvailableYearsResponse {
+  latest: number
+  min: number
+}
+
 // ---------------------------------------------------------------------------
 // Server functions — run on the Nitro server, call Python backend directly
 // ---------------------------------------------------------------------------
@@ -163,4 +249,46 @@ export const fetchTeamsMeta = createServerFn({ method: 'GET' })
     const res = await fetch(`${PYTHON_API}/teams/meta`)
     if (!res.ok) throw new Error('Failed to fetch team metadata')
     return (await res.json()) as TeamsMetaResponse
+  })
+
+export const fetchLeaderboards = createServerFn({ method: 'GET' })
+  .inputValidator((params: FetchLeaderboardsParams) => params)
+  .handler(async ({ data: params }) => {
+    const sp = new URLSearchParams({ year: String(params.year) })
+    if (params.perStat) sp.set('per_stat', String(params.perStat))
+    const res = await fetch(`${PYTHON_API}/leaderboards?${sp}`)
+    if (!res.ok) throw new Error('Failed to fetch leaderboards')
+    return (await res.json()) as LeaderboardsResponse
+  })
+
+export const fetchTeamRoster = createServerFn({ method: 'GET' })
+  .inputValidator((params: FetchTeamRosterParams) => params)
+  .handler(async ({ data: params }) => {
+    const sp = new URLSearchParams({ year: String(params.year) })
+    if (params.sortBy) sp.set('sort_by', params.sortBy)
+    const res = await fetch(
+      `${PYTHON_API}/teams/${params.teamAbbr}/roster?${sp}`,
+    )
+    if (!res.ok) throw new Error('Failed to fetch team roster')
+    return (await res.json()) as TeamRosterResponse
+  })
+
+export const fetchAvailableYears = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    const res = await fetch(`${PYTHON_API}/years`)
+    if (!res.ok) throw new Error('Failed to fetch available years')
+    return (await res.json()) as AvailableYearsResponse
+  })
+
+export const fetchPlayerDetail = createServerFn({ method: 'GET' })
+  .inputValidator((params: FetchPlayerDetailParams) => params)
+  .handler(async ({ data: params }) => {
+    const sp = new URLSearchParams({ year: String(params.year) })
+    if (params.stat) sp.set('stat', params.stat)
+    if (params.peerLimit) sp.set('peer_limit', String(params.peerLimit))
+    const res = await fetch(
+      `${PYTHON_API}/players/${params.playerId}?${sp}`,
+    )
+    if (!res.ok) throw new Error('Failed to fetch player detail')
+    return (await res.json()) as PlayerDetailResponse
   })

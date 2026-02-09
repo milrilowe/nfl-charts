@@ -1,13 +1,11 @@
 import { useMemo } from 'react'
-import { usePlayers, useTeams } from '@/lib/nfl-queries'
-import type { EnrichedPlayer, AggregatedTeam } from '@/lib/nfl-api'
+import { useTeams } from '@/lib/nfl-queries'
+import type { AggregatedTeam } from '@/lib/nfl-api'
 import type { TeamMeta } from '../types'
 
 export function useHierarchyData(year: number) {
-  const playersQuery = usePlayers({ year, limit: 5000 })
   const teamsQuery = useTeams(year)
 
-  const players: EnrichedPlayer[] = playersQuery.data?.data ?? []
   const teamsData: AggregatedTeam[] = teamsQuery.data?.data ?? []
 
   const teamLookup = useMemo(() => {
@@ -32,11 +30,10 @@ export function useHierarchyData(year: number) {
   }, [teamsData])
 
   return {
-    players,
     teams: teamsData,
     teamLookup,
     teamMeta,
-    isLoading: playersQuery.isLoading || teamsQuery.isLoading,
-    error: playersQuery.error || teamsQuery.error,
+    isLoading: teamsQuery.isLoading,
+    error: teamsQuery.error,
   }
 }

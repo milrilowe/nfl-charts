@@ -15,10 +15,11 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import type { EnrichedPlayer } from '@/features/leaderboards/hooks/use-leaderboard'
+import { useTeamRoster } from '@/lib/nfl-queries'
 import type { AggregatedTeam, HierarchySearch } from '../types'
 import { STAT_CATEGORIES, formatStatValue, COLUMN_LABELS } from '@/features/leaderboards/stat-columns'
 import { TEAM_STATS } from '../constants'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -31,21 +32,23 @@ import { useChartTheme } from '@/hooks/use-chart-theme'
 
 interface TeamViewProps {
   team: AggregatedTeam
-  players: EnrichedPlayer[]
+  year: number
   search: HierarchySearch
   onSearchChange: (updates: Partial<HierarchySearch>) => void
   onSelectPlayer: (playerId: string) => void
 }
 
-const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'FB', 'K', 'P']
-
 export function TeamView({
   team,
-  players,
+  year,
   search,
   onSearchChange,
   onSelectPlayer,
 }: TeamViewProps) {
+  const rosterQuery = useTeamRoster(team.team_abbr, year, search.stat)
+  const chartData = rosterQuery.data?.chart_data ?? []
+  const positionGroups = rosterQuery.data?.position_groups ?? []
+
   const categoryConfig = STAT_CATEGORIES[search.category]
   const statDef = categoryConfig?.stats.find((s) => s.key === search.stat)
   const columns = categoryConfig?.tableColumns ?? []
@@ -53,35 +56,15 @@ export function TeamView({
   const isDark = theme === 'dark'
   const chartTheme = useChartTheme()
 
-  // Sort players by current stat
-  const sorted = [...players].sort(
-    (a, b) => (Number(b[search.stat]) || 0) - (Number(a[search.stat]) || 0)
-  )
-
-  // Top 10 for chart
-  const chartData = sorted.slice(0, 10).map((p) => ({
-    name: p.player_name,
-    value: Number(p[search.stat]) || 0,
-  }))
-
-  // Group by position for roster view
-  const byPosition = new Map<string, EnrichedPlayer[]>()
-  for (const p of sorted) {
-    const pos = p.position || 'Other'
-    const existing = byPosition.get(pos)
-    if (existing) {
-      existing.push(p)
-    } else {
-      byPosition.set(pos, [p])
-    }
+  if (rosterQuery.isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
   }
-
-  // Sort position groups
-  const positionGroups = Array.from(byPosition.entries()).sort(([a], [b]) => {
-    const ai = POSITION_ORDER.indexOf(a)
-    const bi = POSITION_ORDER.indexOf(b)
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-  })
 
   return (
     <div className="space-y-6">
@@ -265,7 +248,7 @@ export function TeamView({
 
       {/* Roster by Position */}
       <div className="space-y-4">
-        {positionGroups.map(([position, posPlayers]) => (
+        {positionGroups.map(({ position, players: posPlayers }) => (
           <div key={position}>
             <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {position}
