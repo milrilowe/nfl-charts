@@ -2,15 +2,15 @@ import { createFileRoute, useNavigate, stripSearchParams } from '@tanstack/react
 import { z } from 'zod'
 import { HierarchyPage } from '@/features/nfl-hierarchy'
 import { useTeamSync } from '@/hooks/use-team-sync'
+import { useAvailableYears } from '@/lib/nfl-queries'
 
 const searchDefaults = {
-  year: 2024,
   stat: 'total_yards',
   category: 'passing',
 } as const
 
 const hierarchySearch = z.object({
-  year: z.number().int().min(1999).max(2026).default(searchDefaults.year).catch(searchDefaults.year),
+  year: z.number().int().min(1999).max(2030).optional().catch(undefined),
   team: z.string().optional().catch(undefined),
   player: z.string().optional().catch(undefined),
   stat: z.string().default(searchDefaults.stat).catch(searchDefaults.stat),
@@ -31,6 +31,8 @@ export const Route = createFileRoute('/nfl')({
 function RouteComponent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
+  const { data: yearsData } = useAvailableYears()
+  const year = search.year ?? yearsData?.latest ?? 2024
 
   const handleSearchChange = (updates: Partial<typeof search>) =>
     navigate({ search: (prev) => ({ ...prev, ...updates }) })
@@ -40,6 +42,6 @@ function RouteComponent() {
   )
 
   return (
-    <HierarchyPage search={search} onSearchChange={handleSearchChange} />
+    <HierarchyPage search={{ ...search, year }} onSearchChange={handleSearchChange} />
   )
 }

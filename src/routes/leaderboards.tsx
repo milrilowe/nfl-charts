@@ -2,9 +2,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { LeaderboardsPage } from '@/features/leaderboards'
 import { useTeamSync } from '@/hooks/use-team-sync'
+import { useAvailableYears } from '@/lib/nfl-queries'
 
 const leaderboardSearch = z.object({
-  year: z.number().int().min(1999).max(2026).default(2024).catch(2024),
+  year: z.number().int().min(1999).max(2030).optional().catch(undefined),
   category: z
     .enum(['passing', 'rushing', 'receiving'])
     .default('passing')
@@ -27,6 +28,8 @@ export const Route = createFileRoute('/leaderboards')({
 function RouteComponent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
+  const { data: yearsData } = useAvailableYears()
+  const year = search.year ?? yearsData?.latest ?? 2024
 
   const handleSearchChange = (updates: Partial<typeof search>) =>
     navigate({ search: (prev) => ({ ...prev, ...updates }) })
@@ -34,6 +37,6 @@ function RouteComponent() {
   useTeamSync(search.team, (team) => handleSearchChange({ team }))
 
   return (
-    <LeaderboardsPage search={search} onSearchChange={handleSearchChange} />
+    <LeaderboardsPage search={{ ...search, year }} onSearchChange={handleSearchChange} />
   )
 }

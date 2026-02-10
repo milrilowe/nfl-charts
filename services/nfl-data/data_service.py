@@ -1,23 +1,33 @@
 """
 NFL Data Service - Purpose-built data access with server-side joins and aggregation
 """
-import nfl_data_py as nfl
+import nflreadpy
 import pandas as pd
 from typing import Any
 from functools import lru_cache
 
-# Columns to select from each raw dataset for the enriched join
+# Counting stats to sum when aggregating weekly → seasonal
+SUM_STATS = [
+    'completions', 'attempts', 'passing_yards', 'passing_tds',
+    'passing_interceptions', 'carries', 'rushing_yards', 'rushing_tds',
+    'receptions', 'targets', 'receiving_yards', 'receiving_tds',
+    'fantasy_points', 'fantasy_points_ppr',
+]
+
+# Rate stats to average over games
+MEAN_STATS = ['target_share', 'wopr']
+
+# Player identity columns to keep (first value per group)
+PLAYER_ID_COLS = ['player_name', 'position', 'team', 'headshot_url']
+
+# Columns for the enriched output (after renames)
 SEASONAL_COLUMNS = [
     'player_id', 'season', 'completions', 'attempts',
     'passing_yards', 'passing_tds', 'interceptions',
     'carries', 'rushing_yards', 'rushing_tds',
     'receptions', 'targets', 'receiving_yards', 'receiving_tds',
-    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
+    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x',
     'target_share', 'games',
-]
-
-ROSTER_COLUMNS = [
-    'player_id', 'player_name', 'position', 'team', 'headshot_url',
 ]
 
 TEAM_COLUMNS = [
@@ -48,7 +58,7 @@ ROSTER_STAT_COLUMNS = [
     'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions',
     'carries', 'rushing_yards', 'rushing_tds',
     'receptions', 'targets', 'receiving_yards', 'receiving_tds',
-    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
+    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x',
     'target_share', 'games',
 ]
 
@@ -60,25 +70,9 @@ PLAYER_DETAIL_COLUMNS = [
     'passing_yards', 'passing_tds', 'interceptions',
     'carries', 'rushing_yards', 'rushing_tds',
     'receptions', 'targets', 'receiving_yards', 'receiving_tds',
-    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x', 'dom',
+    'fantasy_points', 'fantasy_points_ppr', 'tgt_sh', 'wopr_x',
     'target_share', 'games',
 ]
-
-# Raw dataset definitions for nfl_data_py
-_DATASETS = {
-    "seasonal": {
-        "import_fn": "import_seasonal_data",
-        "supports_years": True,
-    },
-    "rosters": {
-        "import_fn": "import_seasonal_rosters",
-        "supports_years": True,
-    },
-    "teams": {
-        "import_fn": "import_team_desc",
-        "supports_years": False,
-    },
-}
 
 
 # ---------------------------------------------------------------------------
@@ -86,29 +80,29 @@ _DATASETS = {
 # ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=32)
-def _fetch_raw_cached(dataset_id: str, years_tuple: tuple[int, ...] | None) -> bytes:
-    """Cached fetch that returns pickled DataFrame"""
+def _fetch_weekly_cached(year: int) -> bytes:
+    """Fetch weekly player stats for a year via nflreadpy, cached as pickle."""
     import pickle
-    df = _fetch_raw(dataset_id, list(years_tuple) if years_tuple else None)
+    df = nflreadpy.load_player_stats(seasons=[year]).to_pandas()
     return pickle.dumps(df)
 
 
-def _fetch_dataset(dataset_id: str, years: list[int] | None) -> pd.DataFrame:
-    """Fetch a raw dataset, using pickle cache"""
+@lru_cache(maxsize=4)
+def _fetch_teams_cached() -> bytes:
+    """Fetch team metadata via nflreadpy, cached as pickle."""
     import pickle
-    years_tuple = tuple(years) if years else None
-    pickled = _fetch_raw_cached(dataset_id, years_tuple)
-    return pickle.loads(pickled)
+    df = nflreadpy.load_teams().to_pandas()
+    return pickle.dumps(df)
 
 
-def _fetch_raw(dataset_id: str, years: list[int] | None) -> pd.DataFrame:
-    """Actually fetch from nfl_data_py"""
-    info = _DATASETS[dataset_id]
-    fn = getattr(nfl, info["import_fn"])
-    kwargs = {}
-    if info["supports_years"]:
-        kwargs["years"] = years or [2023, 2024]
-    return fn(**kwargs)
+def _get_weekly(year: int) -> pd.DataFrame:
+    import pickle
+    return pickle.loads(_fetch_weekly_cached(year))
+
+
+def _get_teams_meta_df() -> pd.DataFrame:
+    import pickle
+    return pickle.loads(_fetch_teams_cached())
 
 
 def _safe_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
@@ -117,26 +111,65 @@ def _safe_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# Weekly → seasonal aggregation
+# ---------------------------------------------------------------------------
+
+def _aggregate_seasonal(weekly: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate weekly player stats into seasonal totals."""
+    # Filter to regular season
+    if 'season_type' in weekly.columns:
+        weekly = weekly[weekly['season_type'] == 'REG']
+
+    # Only keep rows with a player_id
+    weekly = weekly[weekly['player_id'].notna() & (weekly['player_id'] != '')]
+
+    # Build aggregation dict
+    agg_dict: dict[str, Any] = {}
+    for col in SUM_STATS:
+        if col in weekly.columns:
+            agg_dict[col] = 'sum'
+    for col in MEAN_STATS:
+        if col in weekly.columns:
+            agg_dict[col] = 'mean'
+    # Player identity: keep first (most recent team/name)
+    for col in PLAYER_ID_COLS:
+        if col in weekly.columns:
+            agg_dict[col] = 'last'
+    # Games played = number of weekly rows
+    agg_dict['week'] = 'count'
+
+    grouped = weekly.groupby(['player_id', 'season'], as_index=False).agg(agg_dict)
+
+    # Rename for compatibility with existing frontend
+    renames = {
+        'week': 'games',
+        'passing_interceptions': 'interceptions',
+        'wopr': 'wopr_x',
+    }
+    grouped = grouped.rename(columns={k: v for k, v in renames.items() if k in grouped.columns})
+
+    # Add tgt_sh alias for target_share
+    if 'target_share' in grouped.columns:
+        grouped['tgt_sh'] = grouped['target_share']
+
+    return grouped
+
+
+# ---------------------------------------------------------------------------
 # Enriched player DataFrame (cached per year)
 # ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=16)
 def _build_enriched_df(year: int) -> bytes:
-    """Join seasonal + rosters + teams into one enriched DataFrame. Cached per year."""
+    """Build enriched seasonal DataFrame: aggregate weekly stats + team metadata."""
     import pickle
 
-    seasonal = _safe_columns(_fetch_dataset("seasonal", [year]), SEASONAL_COLUMNS)
-    rosters = _safe_columns(_fetch_dataset("rosters", [year]), ROSTER_COLUMNS)
-    teams = _safe_columns(_fetch_dataset("teams", None), TEAM_COLUMNS)
-
-    # Deduplicate rosters (keep first per player_id)
-    rosters = rosters.drop_duplicates(subset='player_id', keep='first')
-
-    # Join seasonal + rosters on player_id
-    enriched = seasonal.merge(rosters, on='player_id', how='inner')
+    weekly = _get_weekly(year)
+    seasonal = _aggregate_seasonal(weekly)
+    teams = _safe_columns(_get_teams_meta_df(), TEAM_COLUMNS)
 
     # Join with teams on team → team_abbr
-    enriched = enriched.merge(teams, left_on='team', right_on='team_abbr', how='left')
+    enriched = seasonal.merge(teams, left_on='team', right_on='team_abbr', how='left')
 
     # Drop players without a name
     enriched = enriched[enriched['player_name'].notna() & (enriched['player_name'] != '')]
@@ -209,7 +242,7 @@ def get_players(
 def get_team_aggregates(year: int = 2024, team: str | None = None) -> dict[str, Any]:
     """Get aggregated team stats (player stats summed per team)"""
     enriched = _get_enriched(year)
-    teams_meta = _safe_columns(_fetch_dataset("teams", None), TEAM_COLUMNS)
+    teams_meta = _safe_columns(_get_teams_meta_df(), TEAM_COLUMNS)
 
     # Sum stats by team
     agg = enriched.groupby('team')[SUM_KEYS].sum().reset_index()
@@ -245,7 +278,7 @@ def get_team_aggregates(year: int = 2024, team: str | None = None) -> dict[str, 
 
 def get_teams_meta() -> dict[str, Any]:
     """Get lightweight team metadata for theming/selectors"""
-    df = _safe_columns(_fetch_dataset("teams", None), TEAM_COLUMNS)
+    df = _safe_columns(_get_teams_meta_df(), TEAM_COLUMNS)
     df = df.fillna('')
     return {
         "data": df.to_dict(orient="records"),
@@ -366,13 +399,14 @@ def get_player_with_peers(
 
 @lru_cache(maxsize=1)
 def _detect_latest_year() -> int:
-    """Probe nfl_data_py from current year downward to find latest available seasonal data."""
+    """Probe nflreadpy from current year downward to find latest available seasonal data."""
     from datetime import date
     current = date.today().year
     for year in range(current, 1999, -1):
         try:
-            nfl.import_seasonal_data(years=[year])
-            return year
+            df = nflreadpy.load_player_stats(seasons=[year])
+            if len(df) > 0:
+                return year
         except Exception:
             continue
     return 2024
@@ -385,6 +419,7 @@ def get_available_years() -> dict[str, int]:
 
 def clear_cache():
     """Clear all caches"""
-    _fetch_raw_cached.cache_clear()
+    _fetch_weekly_cached.cache_clear()
+    _fetch_teams_cached.cache_clear()
     _build_enriched_df.cache_clear()
     _detect_latest_year.cache_clear()
